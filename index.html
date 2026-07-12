@@ -293,7 +293,7 @@ button:focus-visible,select:focus-visible,.seal:focus-visible{outline:2px solid 
 <header>
   <div class="wrap">
     <div class="cover">
-      <div class="spine">ことばの手帖</div>
+      <div class="spine">読書への道</div>
       <div class="cover-main">
         <div class="cover-top">
           <h1>ことばの手帖</h1>
@@ -313,7 +313,7 @@ button:focus-visible,select:focus-visible,.seal:focus-visible{outline:2px solid 
       <button class="tab" data-tab="kquiz">漢字測驗</button>
       <button class="tab" data-tab="vocab">單字測驗</button>
       <button class="tab" data-tab="listen">聽力測驗</button>
-      <button class="tab" data-tab="reading">閱讀</button>
+      <button class="tab" data-tab="reading">閱讀測驗</button>
       <button class="tab" data-tab="kana">五十音</button>
     </nav>
   </div>
@@ -336,7 +336,7 @@ button:focus-visible,select:focus-visible,.seal:focus-visible{outline:2px solid 
     <div class="srow"><span class="lbl">朗讀語速</span><input type="range" id="rateRange" min="0.5" max="1.2" step="0.05"><span id="rateVal" class="mut"></span></div>
     <div class="srow"><span class="lbl">字體大小</span><input type="range" id="fsRange" min="0.85" max="1.4" step="0.05"><span id="fsVal" class="mut"></span></div>
     <div class="srow"><span class="lbl">日文語音</span><span id="voiceNote" class="mut">偵測中…</span></div>
-    <div class="srow"><button id="resetBtn" class="btn danger">清除錯題紀錄</button></div>
+    <div class="srow"><button id="resetBtn" class="btn danger">清除錯題紀錄</button><button id="checkBtn" class="btn">資料自檢</button></div>
     <div class="srow"><span class="lbl">紀錄同步</span><button id="expBtn" class="btn">匯出</button><button id="impBtn" class="btn">匯入</button></div>
     <textarea id="syncBox" class="syncbox" placeholder="匯出：按「匯出」產生代碼並自動複製，用訊息或 AirDrop 傳到另一台裝置。匯入：把對方的代碼貼在這裡，按「匯入」。"></textarea>
     <div class="srow"><span class="lbl">自動同步</span><span id="syncState" class="mut">未設定</span></div>
@@ -426,6 +426,14 @@ var DATA=[
 {"cat":"media","jp":"このドラマは原作[げんさく]のほうが面白[おもしろ]いと思[おも]う。","kana":"このドラマはげんさくのほうがおもしろいとおもう。","romaji":"Kono dorama wa gensaku no hou ga omoshiroi to omou.","zh":"這部劇我覺得原著比較好看。","scene":"聊影劇與原著小說的比較。","vocab":[["ドラマ","ドラマ","dorama","連續劇"],["原作","げんさく","gensaku","原著"]],"grammar":[["〜のほうが","比較句「～比較…」。"],["〜と思う","「我覺得～」。"]]}
 ];
 
+/* ================= 資料規格（改動前必讀；改完務必按 設定→資料自檢） =================
+1) 長度必須維持：VOCAB＝VEX（索引一一對應）；GR＝GRZH＝GRRM；KEX 鍵＝KANJI 全部字。
+2) 注音格式：漢字[かな] 貼齊；[ ]內只能是平假名與ー；羅馬拼音用假名拼寫式。
+3) RD 每題＝[問,正解,干擾,干擾,干擾]，正解固定放第 2 欄，四個選項不得重複。
+4) 新增單字一律「附加在 VOCAB 與 VEX 末端」；不可插入中段或刪除（測驗紀錄以索引儲存）。
+5) 介面規則：對錯只用綠紅底色；單字測驗不自動朗讀；出題「未出過優先→錯題加重」。
+6) 每次改動必須遞增 sw.js 第一行快取版本（nikki-vN），否則裝置吃舊快取。
+====================================================================== */
 /* ---------- 儲存（本機開啟時持久，受限環境自動退回記憶體） ---------- */
 var store=(function(){
   try{
@@ -465,14 +473,22 @@ function toast(msg){
 }
 
 /* ---------- 語音 ---------- */
-var jaVoices=[];
+var jaVoices=[],zhVoices=[];
 function refreshVoices(){
   if(!window.speechSynthesis){updateVoiceNote();return;}
   try{
-    jaVoices=speechSynthesis.getVoices().filter(function(v){
+    var all=speechSynthesis.getVoices();
+    jaVoices=all.filter(function(v){
       return v.lang&&v.lang.toLowerCase().replace("_","-").indexOf("ja")===0;
     });
-  }catch(e){jaVoices=[];}
+    zhVoices=all.filter(function(v){
+      return v.lang&&v.lang.toLowerCase().replace("_","-").indexOf("zh")===0;
+    });
+    zhVoices.sort(function(a,b){
+      function sc(v){var l=v.lang.toLowerCase();return l.indexOf("tw")>=0?0:(l.indexOf("hk")>=0?1:2);}
+      return sc(a)-sc(b);
+    });
+  }catch(e){jaVoices=[];zhVoices=[];}
   updateVoiceNote();
 }
 function updateVoiceNote(){
@@ -483,6 +499,7 @@ function updateVoiceNote(){
 }
 function speak(text,slow){
   if(!window.speechSynthesis){toast("此瀏覽器不支援語音");return;}
+  if(Seq.playing)seqStop();
   if(!jaVoices.length)refreshVoices();
   var u=new SpeechSynthesisUtterance(text);
   u.lang="ja-JP";
@@ -491,10 +508,95 @@ function speak(text,slow){
   try{speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}
 }
 
+/* ---------- 連續朗讀與複製 ---------- */
+var Seq={id:null,items:null,pos:0,playing:false};
+function seqBtnsRefresh(){
+  var bs=document.querySelectorAll("[data-seq]");
+  for(var i=0;i<bs.length;i++){
+    bs[i].textContent=(Seq.playing&&bs[i].getAttribute("data-seq")===Seq.id)?"■ 停止":"▶ 連續朗讀";
+  }
+}
+function seqStop(){
+  Seq.playing=false;Seq.id=null;Seq.items=null;
+  try{speechSynthesis.cancel();}catch(e){}
+  seqBtnsRefresh();
+}
+function seqNext(){
+  if(!Seq.playing)return;
+  if(Seq.pos>=Seq.items.length){seqStop();return;}
+  var it=Seq.items[Seq.pos++];
+  var u=new SpeechSynthesisUtterance(it.t);
+  if(it.l==="zh"){
+    u.lang=zhVoices.length?zhVoices[0].lang:"zh-TW";
+    if(zhVoices.length)u.voice=zhVoices[0];
+  }else{
+    u.lang="ja-JP";
+    if(jaVoices.length)u.voice=jaVoices[0];
+  }
+  u.rate=settings.rate;
+  u.onend=function(){setTimeout(seqNext,140);};
+  u.onerror=function(){setTimeout(seqNext,140);};
+  try{speechSynthesis.speak(u);}catch(e){seqStop();}
+}
+function seqItemsFor(id){
+  var out=[],i;
+  if(id==="vb"){
+    vbInit();
+    var q=Vb.q.toLowerCase();
+    for(var x=0;x<VBIDX.length;x++){
+      i=VBIDX[x];var v=VOCAB[i];
+      if(Vb.row!=="all"&&vbRowOf(v[1])!==Vb.row)continue;
+      if(q&&(v[0]+v[1]+v[2]+v[3]).toLowerCase().indexOf(q)<0)continue;
+      out.push({t:v[1],l:"ja"});
+      var z=v[3].replace(/（[^）]*）/g,"").replace(/\([^)]*\)/g,"").trim();
+      if(z)out.push({t:z,l:"zh"});
+    }
+  }else if(id.indexOf("kana:")===0){
+    var pool=kanaPool(id.slice(5),Ks.script);
+    for(i=0;i<pool.length;i++)out.push({t:pool[i][0],l:"ja"});
+  }else if(id.indexOf("num:")===0){
+    var a=NSEQ[id]||[];
+    for(i=0;i<a.length;i++)out.push({t:a[i],l:"ja"});
+  }
+  return out;
+}
+function seqToggle(id){
+  if(!window.speechSynthesis){toast("此瀏覽器不支援語音");return;}
+  if(Seq.playing&&Seq.id===id){seqStop();return;}
+  try{speechSynthesis.cancel();}catch(e){}
+  if(!jaVoices.length)refreshVoices();
+  var items=seqItemsFor(id);
+  if(!items.length){toast("此頁沒有可朗讀的項目");return;}
+  Seq={id:id,items:items,pos:0,playing:true};
+  seqBtnsRefresh();
+  seqNext();
+}
+document.addEventListener("click",function(e){
+  var t=e.target;
+  while(t&&t!==document&&!(t.getAttribute&&t.getAttribute("data-seq")))t=t.parentNode;
+  if(t&&t!==document)seqToggle(t.getAttribute("data-seq"));
+});
+function fallbackCopy(s){
+  var ta=document.createElement("textarea");
+  ta.value=s;ta.style.position="fixed";ta.style.opacity="0";
+  document.body.appendChild(ta);ta.select();
+  try{document.execCommand("copy");}catch(e){}
+  document.body.removeChild(ta);
+}
+function copyText(s){
+  var done=function(){toast("已複製「"+s+"」");};
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(s).then(done,function(){fallbackCopy(s);done();});
+  }else{fallbackCopy(s);done();}
+}
+
 /* ---------- 分頁 ---------- */
 var curTab="learn";
 function switchTab(t){
   curTab=t;
+  if(Seq.playing)seqStop();
+  if(t==="learn")cur=Math.floor(Math.random()*DATA.length);
+  else if(t==="gsent")gsCur=Math.floor(Math.random()*GS.length);
   var bs=document.querySelectorAll(".tab");
   for(var i=0;i<bs.length;i++)bs[i].classList.toggle("on",bs[i].getAttribute("data-tab")===t);
   if(t==="learn")renderLearn();
@@ -1324,8 +1426,14 @@ function pickQ(pool,seen,err,last){
   return i;
 }
 var Vs={i:-1,opts:null,done:false,pick:-1,last:-1,dir:0};
-function newVocabQ(){
-  var i=pickQ(rng(VOCAB.length),vSeen,vErr,Vs.last);
+function pickUniform(pool,last){
+  var i;
+  do{i=pool[Math.floor(Math.random()*pool.length)];}while(i===last&&pool.length>1);
+  return i;
+}
+function newVocabQ(){setupVocabQ(pickQ(rng(VOCAB.length),vSeen,vErr,Vs.last));}
+function rndVocabQ(){setupVocabQ(pickUniform(rng(VOCAB.length),Vs.last));}
+function setupVocabQ(i){
   Vs.last=i;Vs.i=i;
   vSeen[i]=1;eSave("nikki_vSeen",vSeen);
   var used={};used[VOCAB[i][3]]=1;
@@ -1336,6 +1444,7 @@ function newVocabQ(){
     var j=Math.floor(Math.random()*VOCAB.length);
     if(Vs.dir===0){
       var g=VOCAB[j][3];
+      if(VOCAB[j][0]===VOCAB[i][0])continue;
       if(!used[g]){used[g]=1;cand.push(j);}
     }else{
       var w=VOCAB[j][0],g2=VOCAB[j][3];
@@ -1349,6 +1458,7 @@ function renderVocab(){
   var head="<div class='rowline'>"+
     "<button class='btn mini"+(Vs.dir===0?" primary":"")+"' id='vD0'>日→中</button>"+
     "<button class='btn mini"+(Vs.dir===1?" primary":"")+"' id='vD1'>中→日</button>"+
+    "<button class='btn mini' id='vRand'>隨機</button>"+
     "<span class='grow'></span>"+
   "</div>";
   var body;
@@ -1384,6 +1494,7 @@ function renderVocab(){
   function reQ(){if(Vs.i!==-1)newVocabQ();else renderVocab();}
   document.getElementById("vD0").onclick=function(){if(Vs.dir!==0){Vs.dir=0;reQ();}};
   document.getElementById("vD1").onclick=function(){if(Vs.dir!==1){Vs.dir=1;reQ();}};
+  document.getElementById("vRand").onclick=rndVocabQ;
   var st=document.getElementById("vStart");
   if(st)st.onclick=newVocabQ;
   var pl=document.getElementById("vPlay");
@@ -1484,7 +1595,10 @@ var GR=[
 ["毎日[まいにち]、バス（　）会社[かいしゃ]へ行[い]きます。","で","に","を","と","交通工具＋で：「搭～去」；走路去則說「歩[ある]いて行きます」。"],
 ["このボタンを押[お]す（　）、お釣[つ]りが出[で]ます。","と","たら","ば","ても","辭書形＋と：「一～就…」，用於自然結果、機器操作等固定結果（此項通行分級多歸 N4）。"],
 ["道[みち]が分[わ]かりませんでしたから、日本人[にほんじん]に地図[ちず]を書[か]いて（　）。","もらいました","あげました","くれました","いました","て形＋もらいます：「請別人為我做～」；てあげます＝我為別人做、てくれます＝別人（主動）為我做（此組多歸 N4）。"],
-["日本[にほん]へ（　）、富士山[ふじさん]に登[のぼ]りたいです。","行[い]ったら","行[い]くと","行[い]っても","行[い]きたら","た形＋ら：「（如果／等到）～就…」；後面可以接希望、請求，「〜と」後面則不行（此項多歸 N4）。"]
+["日本[にほん]へ（　）、富士山[ふじさん]に登[のぼ]りたいです。","行[い]ったら","行[い]くと","行[い]っても","行[い]きたら","た形＋ら：「（如果／等到）～就…」；後面可以接希望、請求，「〜と」後面則不行（此項多歸 N4）。"],
+["（　）日本[にほん]へ来[き]ましたか。――去年[きょねん]の三月[さんがつ]です。","いつ","どこ","だれ","どう","いつ＝「什麼時候」。答句是時間（去年三月），所以問句要用いつ；どこ問地點、だれ問人，どう問方式（需說どうやって），都接不上這個答句。"],
+["この時計[とけい]は（　）ですか。――三千円[さんぜんえん]です。","いくら","いくつ","いつ","どちら","いくら＝「多少錢」。答句是價錢（三千円）；いくつ問數量或年齡、いつ問時間、どちら問「哪一個」，都不能用價錢回答。"],
+["（　）スポーツが好[す]きですか。――サッカーです。","どんな","どう","なぜ","いくら","どんな＋名詞＝「什麼樣的～」。どう不能直接接名詞；なぜ問原因、いくら問價錢，與答句（足球）不合。"]
 ];
 var Gs={i:-1,opts:null,done:false,pick:"",last:-1,scope:-1,mode:0};
 var RC=[
@@ -1516,8 +1630,9 @@ function grPool(){
   for(var i=s[1];i<=s[2];i++)a.push(i);
   return a;
 }
-function newGrammarQ(){
-  var i=pickQ(grPool(),gSeen,gErr,Gs.last);
+function newGrammarQ(){setupGrammarQ(pickQ(grPool(),gSeen,gErr,Gs.last));}
+function rndGrammarQ(){setupGrammarQ(pickUniform(grPool(),Gs.last));}
+function setupGrammarQ(i){
   Gs.last=i;Gs.i=i;
   gSeen[i]=1;eSave("nikki_gSeen",gSeen);
   var g=GR[i];
@@ -1542,9 +1657,9 @@ function renderGrammar(){
     var sel="<select class='sel' id='gScope'><option value='-1'"+(Gs.scope<0?" selected":"")+">全部範圍</option>";
     for(var s=0;s<GLSEC.length;s++)sel+="<option value='"+s+"'"+(Gs.scope===s?" selected":"")+">"+GLSEC[s][0]+"</option>";
     sel+="</select>";
-    head+=sel+"<span class='grow'></span>";
+    head+=sel+"<button class='btn mini' id='gRand'>隨機</button><span class='grow'></span>";
   }else{
-    head+="<span class='grow'></span><span class='score'>共 "+RC.length+" 題</span>";
+    head+="<button class='btn mini' id='rcRand'>隨機</button><span class='grow'></span><span class='score'>共 "+RC.length+" 題</span>";
   }
   head+="</div>";
   var body;
@@ -1615,6 +1730,10 @@ function renderGrammar(){
   if(nx)nx.onclick=newGrammarQ;
   var sk=document.getElementById("gSkip");
   if(sk)sk.onclick=newGrammarQ;
+  var grd=document.getElementById("gRand");
+  if(grd)grd.onclick=rndGrammarQ;
+  var rcr=document.getElementById("rcRand");
+  if(rcr)rcr.onclick=newRcQ;
   var rcc=document.getElementById("rcClear");
   if(rcc)rcc.onclick=function(){Rc.pick=[];Rc.done=false;renderGrammar();};
   var rcn=document.getElementById("rcNext");
@@ -1860,7 +1979,8 @@ var KEX={
 "魚":{"さかな":275},
 "耳":{"みみ":639}
 };
-var NUMTBL="<p class='sec-t' style='margin-top:26px'>數字與時間的讀法</p><p class='nnote'>底色格＝特殊讀法（要背）；點任一格可朗讀。</p><p class='sec-t'>〜時（點鐘）</p><div class='ngrid'><span class='ncell' data-say='いちじ'>一時<i>いちじ</i></span><span class='ncell' data-say='にじ'>二時<i>にじ</i></span><span class='ncell' data-say='さんじ'>三時<i>さんじ</i></span><span class='ncell nstar' data-say='よじ'>四時<i>よじ</i></span><span class='ncell' data-say='ごじ'>五時<i>ごじ</i></span><span class='ncell' data-say='ろくじ'>六時<i>ろくじ</i></span><span class='ncell nstar' data-say='しちじ'>七時<i>しちじ</i></span><span class='ncell' data-say='はちじ'>八時<i>はちじ</i></span><span class='ncell nstar' data-say='くじ'>九時<i>くじ</i></span><span class='ncell' data-say='じゅうじ'>十時<i>じゅうじ</i></span><span class='ncell' data-say='じゅういちじ'>十一時<i>じゅういちじ</i></span><span class='ncell' data-say='じゅうにじ'>十二時<i>じゅうにじ</i></span></div><p class='sec-t'>〜分（分鐘）</p><div class='ngrid'><span class='ncell nstar' data-say='いっぷん'>一分<i>いっぷん</i></span><span class='ncell' data-say='にふん'>二分<i>にふん</i></span><span class='ncell nstar' data-say='さんぷん'>三分<i>さんぷん</i></span><span class='ncell nstar' data-say='よんぷん'>四分<i>よんぷん</i></span><span class='ncell' data-say='ごふん'>五分<i>ごふん</i></span><span class='ncell nstar' data-say='ろっぷん'>六分<i>ろっぷん</i></span><span class='ncell' data-say='ななふん'>七分<i>ななふん</i></span><span class='ncell nstar' data-say='はっぷん'>八分<i>はっぷん</i></span><span class='ncell' data-say='きゅうふん'>九分<i>きゅうふん</i></span><span class='ncell nstar' data-say='じゅっぷん'>十分<i>じゅっぷん</i></span></div><p class='sec-t'>〜月（月份）</p><div class='ngrid'><span class='ncell' data-say='いちがつ'>一月<i>いちがつ</i></span><span class='ncell' data-say='にがつ'>二月<i>にがつ</i></span><span class='ncell' data-say='さんがつ'>三月<i>さんがつ</i></span><span class='ncell nstar' data-say='しがつ'>四月<i>しがつ</i></span><span class='ncell' data-say='ごがつ'>五月<i>ごがつ</i></span><span class='ncell' data-say='ろくがつ'>六月<i>ろくがつ</i></span><span class='ncell nstar' data-say='しちがつ'>七月<i>しちがつ</i></span><span class='ncell' data-say='はちがつ'>八月<i>はちがつ</i></span><span class='ncell nstar' data-say='くがつ'>九月<i>くがつ</i></span><span class='ncell' data-say='じゅうがつ'>十月<i>じゅうがつ</i></span><span class='ncell' data-say='じゅういちがつ'>十一月<i>じゅういちがつ</i></span><span class='ncell' data-say='じゅうにがつ'>十二月<i>じゅうにがつ</i></span></div><p class='sec-t'>〜日（日期）</p><div class='ngrid'><span class='ncell nstar' data-say='ついたち'>一日<i>ついたち</i></span><span class='ncell nstar' data-say='ふつか'>二日<i>ふつか</i></span><span class='ncell nstar' data-say='みっか'>三日<i>みっか</i></span><span class='ncell nstar' data-say='よっか'>四日<i>よっか</i></span><span class='ncell nstar' data-say='いつか'>五日<i>いつか</i></span><span class='ncell nstar' data-say='むいか'>六日<i>むいか</i></span><span class='ncell nstar' data-say='なのか'>七日<i>なのか</i></span><span class='ncell nstar' data-say='ようか'>八日<i>ようか</i></span><span class='ncell nstar' data-say='ここのか'>九日<i>ここのか</i></span><span class='ncell nstar' data-say='とおか'>十日<i>とおか</i></span><span class='ncell nstar' data-say='じゅうよっか'>十四日<i>じゅうよっか</i></span><span class='ncell nstar' data-say='はつか'>二十日<i>はつか</i></span><span class='ncell nstar' data-say='にじゅうよっか'>二十四日<i>にじゅうよっか</i></span></div><p class='nnote'>其他日期＝數字＋にち（例：十一日 じゅういちにち）。</p><p class='sec-t'>〜人（人數）</p><div class='ngrid'><span class='ncell nstar' data-say='ひとり'>一人<i>ひとり</i></span><span class='ncell nstar' data-say='ふたり'>二人<i>ふたり</i></span><span class='ncell' data-say='さんにん'>三人<i>さんにん</i></span><span class='ncell nstar' data-say='よにん'>四人<i>よにん</i></span></div><p class='nnote'>五人之後＝數字＋にん（例：五人 ごにん、七人 しちにん）。</p><p class='sec-t'>〜つ（個數・和語）</p><div class='ngrid'><span class='ncell' data-say='ひとつ'>一つ<i>ひとつ</i></span><span class='ncell' data-say='ふたつ'>二つ<i>ふたつ</i></span><span class='ncell' data-say='みっつ'>三つ<i>みっつ</i></span><span class='ncell' data-say='よっつ'>四つ<i>よっつ</i></span><span class='ncell' data-say='いつつ'>五つ<i>いつつ</i></span><span class='ncell' data-say='むっつ'>六つ<i>むっつ</i></span><span class='ncell' data-say='ななつ'>七つ<i>ななつ</i></span><span class='ncell' data-say='やっつ'>八つ<i>やっつ</i></span><span class='ncell' data-say='ここのつ'>九つ<i>ここのつ</i></span><span class='ncell' data-say='とお'>十<i>とお</i></span></div><p class='sec-t'>量詞（促音・濁音變化組）</p><div class='nscroll'><table class='ntbl'><thead><tr><th></th><th>〜個</th><th>〜本</th><th>〜匹</th><th>〜杯</th><th>〜回</th><th>〜歳</th></tr></thead><tbody><tr><th>一</th><td class=\"nstar\" data-say='いっこ'>いっこ</td><td class=\"nstar\" data-say='いっぽん'>いっぽん</td><td class=\"nstar\" data-say='いっぴき'>いっぴき</td><td class=\"nstar\" data-say='いっぱい'>いっぱい</td><td class=\"nstar\" data-say='いっかい'>いっかい</td><td class=\"nstar\" data-say='いっさい'>いっさい</td></tr><tr><th>二</th><td data-say='にこ'>にこ</td><td data-say='にほん'>にほん</td><td data-say='にひき'>にひき</td><td data-say='にはい'>にはい</td><td data-say='にかい'>にかい</td><td data-say='にさい'>にさい</td></tr><tr><th>三</th><td data-say='さんこ'>さんこ</td><td class=\"nstar\" data-say='さんぼん'>さんぼん</td><td class=\"nstar\" data-say='さんびき'>さんびき</td><td class=\"nstar\" data-say='さんばい'>さんばい</td><td data-say='さんかい'>さんかい</td><td data-say='さんさい'>さんさい</td></tr><tr><th>四</th><td data-say='よんこ'>よんこ</td><td data-say='よんほん'>よんほん</td><td data-say='よんひき'>よんひき</td><td data-say='よんはい'>よんはい</td><td data-say='よんかい'>よんかい</td><td data-say='よんさい'>よんさい</td></tr><tr><th>五</th><td data-say='ごこ'>ごこ</td><td data-say='ごほん'>ごほん</td><td data-say='ごひき'>ごひき</td><td data-say='ごはい'>ごはい</td><td data-say='ごかい'>ごかい</td><td data-say='ごさい'>ごさい</td></tr><tr><th>六</th><td class=\"nstar\" data-say='ろっこ'>ろっこ</td><td class=\"nstar\" data-say='ろっぽん'>ろっぽん</td><td class=\"nstar\" data-say='ろっぴき'>ろっぴき</td><td class=\"nstar\" data-say='ろっぱい'>ろっぱい</td><td class=\"nstar\" data-say='ろっかい'>ろっかい</td><td data-say='ろくさい'>ろくさい</td></tr><tr><th>七</th><td data-say='ななこ'>ななこ</td><td data-say='ななほん'>ななほん</td><td data-say='ななひき'>ななひき</td><td data-say='ななはい'>ななはい</td><td data-say='ななかい'>ななかい</td><td data-say='ななさい'>ななさい</td></tr><tr><th>八</th><td class=\"nstar\" data-say='はっこ'>はっこ</td><td class=\"nstar\" data-say='はっぽん'>はっぽん</td><td class=\"nstar\" data-say='はっぴき'>はっぴき</td><td class=\"nstar\" data-say='はっぱい'>はっぱい</td><td class=\"nstar\" data-say='はっかい'>はっかい</td><td class=\"nstar\" data-say='はっさい'>はっさい</td></tr><tr><th>九</th><td data-say='きゅうこ'>きゅうこ</td><td data-say='きゅうほん'>きゅうほん</td><td data-say='きゅうひき'>きゅうひき</td><td data-say='きゅうはい'>きゅうはい</td><td data-say='きゅうかい'>きゅうかい</td><td data-say='きゅうさい'>きゅうさい</td></tr><tr><th>十</th><td class=\"nstar\" data-say='じゅっこ'>じゅっこ</td><td class=\"nstar\" data-say='じゅっぽん'>じゅっぽん</td><td class=\"nstar\" data-say='じゅっぴき'>じゅっぴき</td><td class=\"nstar\" data-say='じゅっぱい'>じゅっぱい</td><td class=\"nstar\" data-say='じゅっかい'>じゅっかい</td><td class=\"nstar\" data-say='じゅっさい'>じゅっさい</td></tr></tbody></table></div><div class='ngrid' style='margin-top:6px'><span class='ncell nstar' data-say='はたち'>二十歳<i>はたち</i></span></div><p class='sec-t'>百</p><div class='ngrid'><span class='ncell' data-say='ひゃく'>百<i>ひゃく</i></span><span class='ncell' data-say='にひゃく'>二百<i>にひゃく</i></span><span class='ncell nstar' data-say='さんびゃく'>三百<i>さんびゃく</i></span><span class='ncell' data-say='よんひゃく'>四百<i>よんひゃく</i></span><span class='ncell' data-say='ごひゃく'>五百<i>ごひゃく</i></span><span class='ncell nstar' data-say='ろっぴゃく'>六百<i>ろっぴゃく</i></span><span class='ncell' data-say='ななひゃく'>七百<i>ななひゃく</i></span><span class='ncell nstar' data-say='はっぴゃく'>八百<i>はっぴゃく</i></span><span class='ncell' data-say='きゅうひゃく'>九百<i>きゅうひゃく</i></span></div><p class='sec-t'>千</p><div class='ngrid'><span class='ncell' data-say='せん'>千<i>せん</i></span><span class='ncell' data-say='にせん'>二千<i>にせん</i></span><span class='ncell nstar' data-say='さんぜん'>三千<i>さんぜん</i></span><span class='ncell' data-say='よんせん'>四千<i>よんせん</i></span><span class='ncell' data-say='ごせん'>五千<i>ごせん</i></span><span class='ncell' data-say='ろくせん'>六千<i>ろくせん</i></span><span class='ncell' data-say='ななせん'>七千<i>ななせん</i></span><span class='ncell nstar' data-say='はっせん'>八千<i>はっせん</i></span><span class='ncell' data-say='きゅうせん'>九千<i>きゅうせん</i></span></div><p class='sec-t'>其他規則</p><p class='nnote'>〜冊・〜週間・〜か月：一・八・十促音化＝いっさつ、はっしゅうかん、じゅっかげつ；另 六か月＝ろっかげつ（特殊）；其餘規則。<br>〜枚・〜台・〜円・〜年：規則讀法＝數字＋まい／だい／えん／ねん（例外：四年 よねん）。</p>";
+var NSEQ={"num:josu":["いっこ","にこ","さんこ","よんこ","ごこ","ろっこ","ななこ","はっこ","きゅうこ","じゅっこ","いっぽん","にほん","さんぼん","よんほん","ごほん","ろっぽん","ななほん","はっぽん","きゅうほん","じゅっぽん","いっぴき","にひき","さんびき","よんひき","ごひき","ろっぴき","ななひき","はっぴき","きゅうひき","じゅっぴき","いっぱい","にはい","さんばい","よんはい","ごはい","ろっぱい","ななはい","はっぱい","きゅうはい","じゅっぱい","いっかい","にかい","さんかい","よんかい","ごかい","ろっかい","ななかい","はっかい","きゅうかい","じゅっかい","いっさい","にさい","さんさい","よんさい","ごさい","ろくさい","ななさい","はっさい","きゅうさい","じゅっさい","はたち"],"num:ji":["いちじ","にじ","さんじ","よじ","ごじ","ろくじ","しちじ","はちじ","くじ","じゅうじ","じゅういちじ","じゅうにじ"],"num:fun":["いっぷん","にふん","さんぷん","よんぷん","ごふん","ろっぷん","ななふん","はっぷん","きゅうふん","じゅっぷん"],"num:gatsu":["いちがつ","にがつ","さんがつ","しがつ","ごがつ","ろくがつ","しちがつ","はちがつ","くがつ","じゅうがつ","じゅういちがつ","じゅうにがつ"],"num:nichi":["ついたち","ふつか","みっか","よっか","いつか","むいか","なのか","ようか","ここのか","とおか","じゅうよっか","はつか","にじゅうよっか"],"num:nin":["ひとり","ふたり","さんにん","よにん"],"num:tsu":["ひとつ","ふたつ","みっつ","よっつ","いつつ","むっつ","ななつ","やっつ","ここのつ","とお"],"num:hyaku":["ひゃく","にひゃく","さんびゃく","よんひゃく","ごひゃく","ろっぴゃく","ななひゃく","はっぴゃく","きゅうひゃく"],"num:sen":["せん","にせん","さんぜん","よんせん","ごせん","ろくせん","ななせん","はっせん","きゅうせん"]};
+var NUMTBL="<p class='sec-t' style='margin-top:26px'>數字與時間的讀法</p><p class='nnote'>底色格＝特殊讀法（要背）；點任一格可朗讀；「連續朗讀」會依序唸完該組（再按一次停止）。</p><p class='sec-t'>〜時（點鐘）　<button class='btn mini' data-seq='num:ji'>▶ 連續朗讀</button></p><div class='ngrid'><span class='ncell' data-say='いちじ'>一時<i>いちじ</i></span><span class='ncell' data-say='にじ'>二時<i>にじ</i></span><span class='ncell' data-say='さんじ'>三時<i>さんじ</i></span><span class='ncell nstar' data-say='よじ'>四時<i>よじ</i></span><span class='ncell' data-say='ごじ'>五時<i>ごじ</i></span><span class='ncell' data-say='ろくじ'>六時<i>ろくじ</i></span><span class='ncell nstar' data-say='しちじ'>七時<i>しちじ</i></span><span class='ncell' data-say='はちじ'>八時<i>はちじ</i></span><span class='ncell nstar' data-say='くじ'>九時<i>くじ</i></span><span class='ncell' data-say='じゅうじ'>十時<i>じゅうじ</i></span><span class='ncell' data-say='じゅういちじ'>十一時<i>じゅういちじ</i></span><span class='ncell' data-say='じゅうにじ'>十二時<i>じゅうにじ</i></span></div><p class='sec-t'>〜分（分鐘）　<button class='btn mini' data-seq='num:fun'>▶ 連續朗讀</button></p><div class='ngrid'><span class='ncell nstar' data-say='いっぷん'>一分<i>いっぷん</i></span><span class='ncell' data-say='にふん'>二分<i>にふん</i></span><span class='ncell nstar' data-say='さんぷん'>三分<i>さんぷん</i></span><span class='ncell nstar' data-say='よんぷん'>四分<i>よんぷん</i></span><span class='ncell' data-say='ごふん'>五分<i>ごふん</i></span><span class='ncell nstar' data-say='ろっぷん'>六分<i>ろっぷん</i></span><span class='ncell' data-say='ななふん'>七分<i>ななふん</i></span><span class='ncell nstar' data-say='はっぷん'>八分<i>はっぷん</i></span><span class='ncell' data-say='きゅうふん'>九分<i>きゅうふん</i></span><span class='ncell nstar' data-say='じゅっぷん'>十分<i>じゅっぷん</i></span></div><p class='sec-t'>〜月（月份）　<button class='btn mini' data-seq='num:gatsu'>▶ 連續朗讀</button></p><div class='ngrid'><span class='ncell' data-say='いちがつ'>一月<i>いちがつ</i></span><span class='ncell' data-say='にがつ'>二月<i>にがつ</i></span><span class='ncell' data-say='さんがつ'>三月<i>さんがつ</i></span><span class='ncell nstar' data-say='しがつ'>四月<i>しがつ</i></span><span class='ncell' data-say='ごがつ'>五月<i>ごがつ</i></span><span class='ncell' data-say='ろくがつ'>六月<i>ろくがつ</i></span><span class='ncell nstar' data-say='しちがつ'>七月<i>しちがつ</i></span><span class='ncell' data-say='はちがつ'>八月<i>はちがつ</i></span><span class='ncell nstar' data-say='くがつ'>九月<i>くがつ</i></span><span class='ncell' data-say='じゅうがつ'>十月<i>じゅうがつ</i></span><span class='ncell' data-say='じゅういちがつ'>十一月<i>じゅういちがつ</i></span><span class='ncell' data-say='じゅうにがつ'>十二月<i>じゅうにがつ</i></span></div><p class='sec-t'>〜日（日期）　<button class='btn mini' data-seq='num:nichi'>▶ 連續朗讀</button></p><div class='ngrid'><span class='ncell nstar' data-say='ついたち'>一日<i>ついたち</i></span><span class='ncell nstar' data-say='ふつか'>二日<i>ふつか</i></span><span class='ncell nstar' data-say='みっか'>三日<i>みっか</i></span><span class='ncell nstar' data-say='よっか'>四日<i>よっか</i></span><span class='ncell nstar' data-say='いつか'>五日<i>いつか</i></span><span class='ncell nstar' data-say='むいか'>六日<i>むいか</i></span><span class='ncell nstar' data-say='なのか'>七日<i>なのか</i></span><span class='ncell nstar' data-say='ようか'>八日<i>ようか</i></span><span class='ncell nstar' data-say='ここのか'>九日<i>ここのか</i></span><span class='ncell nstar' data-say='とおか'>十日<i>とおか</i></span><span class='ncell nstar' data-say='じゅうよっか'>十四日<i>じゅうよっか</i></span><span class='ncell nstar' data-say='はつか'>二十日<i>はつか</i></span><span class='ncell nstar' data-say='にじゅうよっか'>二十四日<i>にじゅうよっか</i></span></div><p class='nnote'>其他日期＝數字＋にち（例：十一日 じゅういちにち）。</p><p class='sec-t'>〜人（人數）　<button class='btn mini' data-seq='num:nin'>▶ 連續朗讀</button></p><div class='ngrid'><span class='ncell nstar' data-say='ひとり'>一人<i>ひとり</i></span><span class='ncell nstar' data-say='ふたり'>二人<i>ふたり</i></span><span class='ncell' data-say='さんにん'>三人<i>さんにん</i></span><span class='ncell nstar' data-say='よにん'>四人<i>よにん</i></span></div><p class='nnote'>五人之後＝數字＋にん（例：五人 ごにん、七人 しちにん）。</p><p class='sec-t'>〜つ（個數・和語）　<button class='btn mini' data-seq='num:tsu'>▶ 連續朗讀</button></p><div class='ngrid'><span class='ncell' data-say='ひとつ'>一つ<i>ひとつ</i></span><span class='ncell' data-say='ふたつ'>二つ<i>ふたつ</i></span><span class='ncell' data-say='みっつ'>三つ<i>みっつ</i></span><span class='ncell' data-say='よっつ'>四つ<i>よっつ</i></span><span class='ncell' data-say='いつつ'>五つ<i>いつつ</i></span><span class='ncell' data-say='むっつ'>六つ<i>むっつ</i></span><span class='ncell' data-say='ななつ'>七つ<i>ななつ</i></span><span class='ncell' data-say='やっつ'>八つ<i>やっつ</i></span><span class='ncell' data-say='ここのつ'>九つ<i>ここのつ</i></span><span class='ncell' data-say='とお'>十<i>とお</i></span></div><p class='sec-t'>量詞（促音・濁音變化組）　<button class='btn mini' data-seq='num:josu'>▶ 連續朗讀</button></p><div class='nscroll'><table class='ntbl'><thead><tr><th></th><th>〜個</th><th>〜本</th><th>〜匹</th><th>〜杯</th><th>〜回</th><th>〜歳</th></tr></thead><tbody><tr><th>一</th><td class=\"nstar\" data-say='いっこ'>いっこ</td><td class=\"nstar\" data-say='いっぽん'>いっぽん</td><td class=\"nstar\" data-say='いっぴき'>いっぴき</td><td class=\"nstar\" data-say='いっぱい'>いっぱい</td><td class=\"nstar\" data-say='いっかい'>いっかい</td><td class=\"nstar\" data-say='いっさい'>いっさい</td></tr><tr><th>二</th><td data-say='にこ'>にこ</td><td data-say='にほん'>にほん</td><td data-say='にひき'>にひき</td><td data-say='にはい'>にはい</td><td data-say='にかい'>にかい</td><td data-say='にさい'>にさい</td></tr><tr><th>三</th><td data-say='さんこ'>さんこ</td><td class=\"nstar\" data-say='さんぼん'>さんぼん</td><td class=\"nstar\" data-say='さんびき'>さんびき</td><td class=\"nstar\" data-say='さんばい'>さんばい</td><td data-say='さんかい'>さんかい</td><td data-say='さんさい'>さんさい</td></tr><tr><th>四</th><td data-say='よんこ'>よんこ</td><td data-say='よんほん'>よんほん</td><td data-say='よんひき'>よんひき</td><td data-say='よんはい'>よんはい</td><td data-say='よんかい'>よんかい</td><td data-say='よんさい'>よんさい</td></tr><tr><th>五</th><td data-say='ごこ'>ごこ</td><td data-say='ごほん'>ごほん</td><td data-say='ごひき'>ごひき</td><td data-say='ごはい'>ごはい</td><td data-say='ごかい'>ごかい</td><td data-say='ごさい'>ごさい</td></tr><tr><th>六</th><td class=\"nstar\" data-say='ろっこ'>ろっこ</td><td class=\"nstar\" data-say='ろっぽん'>ろっぽん</td><td class=\"nstar\" data-say='ろっぴき'>ろっぴき</td><td class=\"nstar\" data-say='ろっぱい'>ろっぱい</td><td class=\"nstar\" data-say='ろっかい'>ろっかい</td><td data-say='ろくさい'>ろくさい</td></tr><tr><th>七</th><td data-say='ななこ'>ななこ</td><td data-say='ななほん'>ななほん</td><td data-say='ななひき'>ななひき</td><td data-say='ななはい'>ななはい</td><td data-say='ななかい'>ななかい</td><td data-say='ななさい'>ななさい</td></tr><tr><th>八</th><td class=\"nstar\" data-say='はっこ'>はっこ</td><td class=\"nstar\" data-say='はっぽん'>はっぽん</td><td class=\"nstar\" data-say='はっぴき'>はっぴき</td><td class=\"nstar\" data-say='はっぱい'>はっぱい</td><td class=\"nstar\" data-say='はっかい'>はっかい</td><td class=\"nstar\" data-say='はっさい'>はっさい</td></tr><tr><th>九</th><td data-say='きゅうこ'>きゅうこ</td><td data-say='きゅうほん'>きゅうほん</td><td data-say='きゅうひき'>きゅうひき</td><td data-say='きゅうはい'>きゅうはい</td><td data-say='きゅうかい'>きゅうかい</td><td data-say='きゅうさい'>きゅうさい</td></tr><tr><th>十</th><td class=\"nstar\" data-say='じゅっこ'>じゅっこ</td><td class=\"nstar\" data-say='じゅっぽん'>じゅっぽん</td><td class=\"nstar\" data-say='じゅっぴき'>じゅっぴき</td><td class=\"nstar\" data-say='じゅっぱい'>じゅっぱい</td><td class=\"nstar\" data-say='じゅっかい'>じゅっかい</td><td class=\"nstar\" data-say='じゅっさい'>じゅっさい</td></tr></tbody></table></div><div class='ngrid' style='margin-top:6px'><span class='ncell nstar' data-say='はたち'>二十歳<i>はたち</i></span></div><p class='sec-t'>百　<button class='btn mini' data-seq='num:hyaku'>▶ 連續朗讀</button></p><div class='ngrid'><span class='ncell' data-say='ひゃく'>百<i>ひゃく</i></span><span class='ncell' data-say='にひゃく'>二百<i>にひゃく</i></span><span class='ncell nstar' data-say='さんびゃく'>三百<i>さんびゃく</i></span><span class='ncell' data-say='よんひゃく'>四百<i>よんひゃく</i></span><span class='ncell' data-say='ごひゃく'>五百<i>ごひゃく</i></span><span class='ncell nstar' data-say='ろっぴゃく'>六百<i>ろっぴゃく</i></span><span class='ncell' data-say='ななひゃく'>七百<i>ななひゃく</i></span><span class='ncell nstar' data-say='はっぴゃく'>八百<i>はっぴゃく</i></span><span class='ncell' data-say='きゅうひゃく'>九百<i>きゅうひゃく</i></span></div><p class='sec-t'>千　<button class='btn mini' data-seq='num:sen'>▶ 連續朗讀</button></p><div class='ngrid'><span class='ncell' data-say='せん'>千<i>せん</i></span><span class='ncell' data-say='にせん'>二千<i>にせん</i></span><span class='ncell nstar' data-say='さんぜん'>三千<i>さんぜん</i></span><span class='ncell' data-say='よんせん'>四千<i>よんせん</i></span><span class='ncell' data-say='ごせん'>五千<i>ごせん</i></span><span class='ncell' data-say='ろくせん'>六千<i>ろくせん</i></span><span class='ncell' data-say='ななせん'>七千<i>ななせん</i></span><span class='ncell nstar' data-say='はっせん'>八千<i>はっせん</i></span><span class='ncell' data-say='きゅうせん'>九千<i>きゅうせん</i></span></div><p class='sec-t'>其他規則</p><p class='nnote'>〜冊・〜週間・〜か月：一・八・十促音化＝いっさつ、はっしゅうかん、じゅっかげつ；另 六か月＝ろっかげつ（特殊）；其餘規則。<br>〜枚・〜台・〜円・〜年：規則讀法＝數字＋まい／だい／えん／ねん（例外：四年 よねん）。</p>";
 function kReads(ch,s){
   if(s==="—")return s;
   var a=s.split("、"),o=[];
@@ -1914,13 +2034,14 @@ function renderKanji(){
     el.setAttribute("data-key",ch+"|"+rd);
     info.appendChild(el);
   };
+  seqBtnsRefresh();
 }
 
 /* ---------- 文法學習 ---------- */
-var GRZH=["我是田中。", "那不是我的傘。", "請問您叫什麼名字？", "這是日語的書。", "我是學生。他也是學生。", "這是什麼？——那是相機。", "那位（遠處的）人是老師。", "不好意思，廁所在哪裡？", "昨天看了電影。", "每天早上七點起床。", "桌上有書。", "明天要和朋友見面。", "在圖書館唸書。", "用筷子吃飯。", "下星期要去大阪。", "和弟弟一起去了公園。", "銀行從九點到三點。", "中國比日本大。", "比起紅茶，我更喜歡咖啡。", "班上誰最高？", "房間裡有貓。", "不好意思，請給我三張郵票。", "這道菜不太好吃。", "昨天非常熱。", "這個城鎮又安靜又漂亮。", "我知道一家又便宜又好吃的店。", "田中先生是親切的人。", "天氣變好了。", "我喜歡狗。", "我想要新的腳踏車。", "我想去日本。", "累了呢。稍微休息一下吧。", "方便的話，要不要一起吃午餐？", "行李看起來很重呢。我來幫你拿吧？", "請在這裡寫名字。", "這裡是醫院，請不要抽菸。", "可以借這本字典嗎？", "美術館裡不可以拍照。", "妹妹現在正在看電視。", "姊姊住在大阪。", "洗完手之後再吃飯。", "寫完作業之後，要出去玩。", "睡覺前刷牙。", "唸書的時候，我總是聽音樂。", "我會讀漢字。", "我喜歡聽音樂。", "你爬過富士山嗎？", "星期天會看看書、看看電影。", "因為沒有時間，所以搭計程車去。", "明天大概會下雨吧。", "我覺得學日語很有趣。", "老師說：「明天要考試。」", "「已經寫作業了嗎？」「不，還沒。」", "已經吃過午餐了嗎？", "從車站到家大約要花十分鐘。", "每天早上六點左右起床。", "教室裡只有一個學生。", "冰箱裡只有一瓶果汁。", "昨天什麼都沒吃。", "口渴了。想喝點什麼。", "包包裡有筆和筆記本等等。", "不好意思，請給我水。", "不好意思，我不知道這個漢字的唸法。", "因為沒時間了，我們快點走吧。", "昨天是妹妹的生日，所以我買了蛋糕送她。", "哥哥給了我一本舊字典。", "我從哥哥那裡得到一本舊字典。", "明天要考試，所以今晚必須唸書。", "明天放假，所以不用早起。", "咖啡和紅茶，你喜歡哪一個？", "去百貨公司買鞋子。", "那是開往大阪的電車。", "每天搭公車去公司。", "一按這個按鈕，零錢就會出來。", "因為不知道路，請日本人幫我畫了地圖。", "到了日本的話，想去爬富士山。"];
-var GRRM=["watashi wa tanaka desu.", "sore wa watashi no kasa ja arimasen.", "onamae wa nan desu ka.", "kore wa nihongo no hon desu.", "watashi wa gakusei desu. kare mo gakusei desu.", "kore wa nan desu ka. -- sore wa kamera desu.", "ano hito wa sensei desu.", "sumimasen, toire wa doko desu ka.", "kinou, eiga o mimashita.", "maiasa, shichiji ni okimasu.", "tsukue no ue ni hon ga arimasu.", "ashita, tomodachi ni aimasu.", "toshokan de benkyou shimasu.", "hashi de gohan o tabemasu.", "raishuu, oosaka e ikimasu.", "otouto to issho ni kouen e ikimashita.", "ginkou wa kuji kara sanji made desu.", "chuugoku wa nihon yori ookii desu.", "koucha yori koohii no hou ga suki desu.", "kurasu de dare ga ichiban se ga takai desu ka.", "heya ni neko ga imasu.", "sumimasen, kitte o sanmai kudasai.", "kono ryouri wa amari oishikunai desu.", "kinou wa totemo atsukatta desu.", "kono machi wa shizuka de, kirei desu.", "yasukute oishii mise o shitte imasu.", "tanaka san wa shinsetsu na hito desu.", "tenki ga yoku narimashita.", "watashi wa inu ga suki desu.", "atarashii jitensha ga hoshii desu.", "nihon e ikitai desu.", "tsukaremashita ne. sukoshi yasumimashou.", "yokattara, issho ni hirugohan o tabemasen ka.", "nimotsu ga omosou desu ne. mochimashou ka.", "koko ni namae o kaite kudasai.", "byouin desu kara, koko de tabako o suwanaide kudasai.", "kono jisho o karite mo ii desu ka.", "bijutsukan no naka de wa, shashin o totte wa ikemasen.", "imouto wa ima, terebi o mite imasu.", "ane wa oosaka ni sunde imasu.", "te o aratte kara, gohan o tabemasu.", "shukudai o shita ato de, asobi ni ikimasu.", "neru mae ni, ha o migakimasu.", "benkyou suru toki, itsumo ongaku o kikimasu.", "watashi wa kanji o yomu koto ga dekimasu.", "ongaku o kiku no ga suki desu.", "fujisan ni nobotta koto ga arimasu ka.", "nichiyoubi wa, hon o yondari, eiga o mitari shimasu.", "jikan ga arimasen kara, takushii de ikimasu.", "ashita wa tabun ame deshou.", "nihongo no benkyou wa omoshiroi to omoimasu.", "sensei wa \"ashita tesuto o shimasu\" to iimashita.", "\"mou shukudai o shimashita ka.\" \"iie, mada desu.\"", "mou hirugohan o tabemashita ka.", "eki kara ie made juppun gurai kakarimasu.", "maiasa rokuji goro ni okimasu.", "kyoushitsu ni gakusei ga hitori shika imasen.", "reizouko ni juusu ga ippon dake arimasu.", "kinou wa nani mo tabemasen deshita.", "nodo ga kawakimashita. nanika nomitai desu.", "kaban no naka ni pen ya nooto nado ga arimasu.", "sumimasen, mizu o kudasai.", "sumimasen, kono kanji no yomikata ga wakarimasen.", "jikan ga nai kara, hayaku ikimashou.", "kinou wa imouto no tanjoubi deshita kara, watashi wa keeki o katte, imouto ni agemashita.", "ani ga watashi ni furui jisho o kuremashita.", "watashi wa ani kara furui jisho o moraimashita.", "ashita wa shiken desu kara, konya wa benkyou shinakereba narimasen.", "ashita wa yasumi desu kara, hayaku okinakute mo ii desu.", "koohii to koucha to, dochira ga suki desu ka.", "depaato e kutsu o kai ni ikimasu.", "are wa oosaka e iku densha desu.", "mainichi, basu de kaisha e ikimasu.", "kono botan o osu to, otsuri ga demasu.", "michi ga wakarimasen deshita kara, nihonjin ni chizu o kaite moraimashita.", "nihon e ittara, fujisan ni noboritai desu."];
+var GRZH=["我是田中。", "那不是我的傘。", "請問您叫什麼名字？", "這是日語的書。", "我是學生。他也是學生。", "這是什麼？——那是相機。", "那位（遠處的）人是老師。", "不好意思，廁所在哪裡？", "昨天看了電影。", "每天早上七點起床。", "桌上有書。", "明天要和朋友見面。", "在圖書館唸書。", "用筷子吃飯。", "下星期要去大阪。", "和弟弟一起去了公園。", "銀行從九點到三點。", "中國比日本大。", "比起紅茶，我更喜歡咖啡。", "班上誰最高？", "房間裡有貓。", "不好意思，請給我三張郵票。", "這道菜不太好吃。", "昨天非常熱。", "這個城鎮又安靜又漂亮。", "我知道一家又便宜又好吃的店。", "田中先生是親切的人。", "天氣變好了。", "我喜歡狗。", "我想要新的腳踏車。", "我想去日本。", "累了呢。稍微休息一下吧。", "方便的話，要不要一起吃午餐？", "行李看起來很重呢。我來幫你拿吧？", "請在這裡寫名字。", "這裡是醫院，請不要抽菸。", "可以借這本字典嗎？", "美術館裡不可以拍照。", "妹妹現在正在看電視。", "姊姊住在大阪。", "洗完手之後再吃飯。", "寫完作業之後，要出去玩。", "睡覺前刷牙。", "唸書的時候，我總是聽音樂。", "我會讀漢字。", "我喜歡聽音樂。", "你爬過富士山嗎？", "星期天會看看書、看看電影。", "因為沒有時間，所以搭計程車去。", "明天大概會下雨吧。", "我覺得學日語很有趣。", "老師說：「明天要考試。」", "「已經寫作業了嗎？」「不，還沒。」", "已經吃過午餐了嗎？", "從車站到家大約要花十分鐘。", "每天早上六點左右起床。", "教室裡只有一個學生。", "冰箱裡只有一瓶果汁。", "昨天什麼都沒吃。", "口渴了。想喝點什麼。", "包包裡有筆和筆記本等等。", "不好意思，請給我水。", "不好意思，我不知道這個漢字的唸法。", "因為沒時間了，我們快點走吧。", "昨天是妹妹的生日，所以我買了蛋糕送她。", "哥哥給了我一本舊字典。", "我從哥哥那裡得到一本舊字典。", "明天要考試，所以今晚必須唸書。", "明天放假，所以不用早起。", "咖啡和紅茶，你喜歡哪一個？", "去百貨公司買鞋子。", "那是開往大阪的電車。", "每天搭公車去公司。", "一按這個按鈕，零錢就會出來。", "因為不知道路，請日本人幫我畫了地圖。", "到了日本的話，想去爬富士山。", "什麼時候來日本的？——去年三月。", "這支手錶多少錢？——三千日圓。", "你喜歡什麼樣的運動？——足球。"];
+var GRRM=["watashi wa tanaka desu.", "sore wa watashi no kasa ja arimasen.", "onamae wa nan desu ka.", "kore wa nihongo no hon desu.", "watashi wa gakusei desu. kare mo gakusei desu.", "kore wa nan desu ka. -- sore wa kamera desu.", "ano hito wa sensei desu.", "sumimasen, toire wa doko desu ka.", "kinou, eiga o mimashita.", "maiasa, shichiji ni okimasu.", "tsukue no ue ni hon ga arimasu.", "ashita, tomodachi ni aimasu.", "toshokan de benkyou shimasu.", "hashi de gohan o tabemasu.", "raishuu, oosaka e ikimasu.", "otouto to issho ni kouen e ikimashita.", "ginkou wa kuji kara sanji made desu.", "chuugoku wa nihon yori ookii desu.", "koucha yori koohii no hou ga suki desu.", "kurasu de dare ga ichiban se ga takai desu ka.", "heya ni neko ga imasu.", "sumimasen, kitte o sanmai kudasai.", "kono ryouri wa amari oishikunai desu.", "kinou wa totemo atsukatta desu.", "kono machi wa shizuka de, kirei desu.", "yasukute oishii mise o shitte imasu.", "tanaka san wa shinsetsu na hito desu.", "tenki ga yoku narimashita.", "watashi wa inu ga suki desu.", "atarashii jitensha ga hoshii desu.", "nihon e ikitai desu.", "tsukaremashita ne. sukoshi yasumimashou.", "yokattara, issho ni hirugohan o tabemasen ka.", "nimotsu ga omosou desu ne. mochimashou ka.", "koko ni namae o kaite kudasai.", "byouin desu kara, koko de tabako o suwanaide kudasai.", "kono jisho o karite mo ii desu ka.", "bijutsukan no naka de wa, shashin o totte wa ikemasen.", "imouto wa ima, terebi o mite imasu.", "ane wa oosaka ni sunde imasu.", "te o aratte kara, gohan o tabemasu.", "shukudai o shita ato de, asobi ni ikimasu.", "neru mae ni, ha o migakimasu.", "benkyou suru toki, itsumo ongaku o kikimasu.", "watashi wa kanji o yomu koto ga dekimasu.", "ongaku o kiku no ga suki desu.", "fujisan ni nobotta koto ga arimasu ka.", "nichiyoubi wa, hon o yondari, eiga o mitari shimasu.", "jikan ga arimasen kara, takushii de ikimasu.", "ashita wa tabun ame deshou.", "nihongo no benkyou wa omoshiroi to omoimasu.", "sensei wa \"ashita tesuto o shimasu\" to iimashita.", "\"mou shukudai o shimashita ka.\" \"iie, mada desu.\"", "mou hirugohan o tabemashita ka.", "eki kara ie made juppun gurai kakarimasu.", "maiasa rokuji goro ni okimasu.", "kyoushitsu ni gakusei ga hitori shika imasen.", "reizouko ni juusu ga ippon dake arimasu.", "kinou wa nani mo tabemasen deshita.", "nodo ga kawakimashita. nanika nomitai desu.", "kaban no naka ni pen ya nooto nado ga arimasu.", "sumimasen, mizu o kudasai.", "sumimasen, kono kanji no yomikata ga wakarimasen.", "jikan ga nai kara, hayaku ikimashou.", "kinou wa imouto no tanjoubi deshita kara, watashi wa keeki o katte, imouto ni agemashita.", "ani ga watashi ni furui jisho o kuremashita.", "watashi wa ani kara furui jisho o moraimashita.", "ashita wa shiken desu kara, konya wa benkyou shinakereba narimasen.", "ashita wa yasumi desu kara, hayaku okinakute mo ii desu.", "koohii to koucha to, dochira ga suki desu ka.", "depaato e kutsu o kai ni ikimasu.", "are wa oosaka e iku densha desu.", "mainichi, basu de kaisha e ikimasu.", "kono botan o osu to, otsuri ga demasu.", "michi ga wakarimasen deshita kara, nihonjin ni chizu o kaite moraimashita.", "nihon e ittara, fujisan ni noboritai desu.", "itsu nihon e kimashita ka. -- kyonen no sangatsu desu.", "kono tokei wa ikura desu ka. -- sanzen en desu.", "donna supootsu ga suki desu ka. -- sakkaa desu."];
 
-var GLSEC=[["基本句型",0,4],["指示詞與疑問詞",5,7],["助詞",8,19],["存在與數量",20,21],["形容詞",22,27],["希望與邀請",28,33],["て形句型",34,39],["時間與順序",40,43],["動詞句型",44,47],["原因、推測與引用",48,51],["副詞與其他",52,63],["授受與義務",64,68],["其他重要句型",69,72],["初級Ⅰ後段（多歸N4）",73,75]];
+var GLSEC=[["基本句型",0,4],["指示詞與疑問詞",5,7],["助詞",8,19],["存在與數量",20,21],["形容詞",22,27],["希望與邀請",28,33],["て形句型",34,39],["時間與順序",40,43],["動詞句型",44,47],["原因、推測與引用",48,51],["副詞與其他",52,63],["授受與義務",64,68],["其他重要句型",69,72],["疑問詞（補）",76,78],["初級Ⅰ後段（多歸N4）",73,75]];
 function kanaOnly(t){return t.replace(/([\u4E00-\u9FFF\u3005]+)\[([^\]]+)\]/g,"$2");}
 var PRIMER="<p class='sec-t'>先修：動詞的三類</p><div class='gitem'><p class='gexp'>Ⅰ類（五段動詞）：書[か]く、飲[の]む、買[か]う、話[はな]す、聞[き]く等。<br>Ⅱ類（一段動詞）：〜る，且る前是い段或え段音…食[た]べる、見[み]る、起[お]きる、寝[ね]る。<br>Ⅲ類（不規則）：する、来[く]る。</p></div><p class='sec-t'>先修：ます形與敬體四態</p><div class='gitem'><p class='gexp'>Ⅰ類：字尾う段→い段＋ます（書く→書きます、飲む→飲みます）。<br>Ⅱ類：去る＋ます（食べる→食べます）。<br>Ⅲ類：する→します、来る→来[き]ます。<br>敬體四態：〜ます（現在）／〜ません（否定）／〜ました（過去）／〜ませんでした（過去否定）。</p></div><p class='sec-t'>先修：て形（很多句型都靠它）</p><div class='gitem'><p class='gexp'>Ⅰ類：く→いて（書いて）｜ぐ→いで（泳[およ]いで）｜う・つ・る→って（買って、待[ま]って、乗[の]って）｜む・ぶ・ぬ→んで（飲んで、遊[あそ]んで、死[し]んで）｜す→して（話して）｜例外：行[い]く→行って。<br>Ⅱ類：去る＋て（食べて）。<br>Ⅲ類：して、来[き]て。<br>た形：把て形的「て／で」換成「た／だ」（書いて→書いた、飲んで→飲んだ）。</p></div><p class='sec-t'>先修：ない形</p><div class='gitem'><p class='gexp'>Ⅰ類：う段→あ段＋ない（飲む→飲まない）；字尾「う」→わない（買う→買わない）。<br>Ⅱ類：去る＋ない（食べない）。<br>Ⅲ類：しない、来[こ]ない。</p></div><p class='sec-t'>先修：形容詞變化</p><div class='gitem'><p class='gexp'>い形容詞：高[たか]い／高くない／高かった／高くなかった；連接：高くて；修飾動詞：早[はや]く行く；特殊：いい→よくない、よかった、よく。<br>な形容詞：静[しず]かです／静かじゃありません／静かでした／静かじゃありませんでした；接名詞加な（静かな町[まち]）；連接：静かで。</p></div>";
 function renderGLearn(){
@@ -2761,7 +2882,7 @@ var VEX=[
 ["今日[きょう]は本当[ほんとう]に暑[あつ]いですね。","今天真的很熱呢。"],
 ["日本語[にほんご]の勉強[べんきょう]は楽[たの]しいです。","學日語很開心。"]
 ];
-var VBIDX=null,Vb={q:"",row:"all",open:-1};
+var VBIDX=null,Vb={q:"",row:"あ",open:-1};
 var VBROWS=["あ","か","さ","た","な","は","ま","や","ら","わ"];
 function vbRowOf(kana){
   var c=kana.charAt(0),cc=c.charCodeAt(0);
@@ -2799,14 +2920,23 @@ function vbListHTML(){
 }
 function renderVBook(){
   vbInit();
-  var rows="<option value='all'"+(Vb.row==="all"?" selected":"")+">全部</option>";
-  for(var r=0;r<VBROWS.length;r++)rows+="<option value='"+VBROWS[r]+"'"+(Vb.row===VBROWS[r]?" selected":"")+">"+VBROWS[r]+"行</option>";
-  view.innerHTML="<div class='rowline'>"+
+  var tabs="<button class='btn mini"+(Vb.row==="all"?" primary":"")+"' data-row='all'>全部</button>";
+  for(var r=0;r<VBROWS.length;r++)tabs+="<button class='btn mini"+(Vb.row===VBROWS[r]?" primary":"")+"' data-row='"+VBROWS[r]+"'>"+VBROWS[r]+"行</button>";
+  view.innerHTML="<div class='rowline' id='vbTabs'>"+tabs+"</div>"+
+  "<div class='rowline'>"+
     "<input class='inp' id='vbQ' placeholder='搜尋：漢字、假名、拼音或中文' value='"+Vb.q.replace(/'/g,"&#39;")+"'>"+
-    "<select class='sel' id='vbRow'>"+rows+"</select>"+
+    "<button class='btn mini' data-seq='vb'>▶ 連續朗讀</button>"+
   "</div><div class='card' id='vbList'>"+vbListHTML()+"</div>";
   document.getElementById("vbQ").oninput=function(){Vb.q=this.value;document.getElementById("vbList").innerHTML=vbListHTML();};
-  document.getElementById("vbRow").onchange=function(){Vb.row=this.value;document.getElementById("vbList").innerHTML=vbListHTML();};
+  var rbs=document.querySelectorAll("#vbTabs [data-row]");
+  for(var b2=0;b2<rbs.length;b2++){
+    rbs[b2].onclick=function(){
+      if(Seq.playing)seqStop();
+      Vb.row=this.getAttribute("data-row");Vb.open=-1;
+      renderVBook();
+    };
+  }
+  seqBtnsRefresh();
   document.getElementById("vbList").onclick=function(e){
     var t=e.target;
     while(t&&t!==this&&!t.getAttribute("data-x")&&!t.getAttribute("data-k"))t=t.parentNode;
@@ -2821,10 +2951,11 @@ function renderVBook(){
 }
 
 /* ---------- 漢字測驗 ---------- */
-var KW=[],HOMO={};
+var KW=[],HOMO={},WKANA={};
 (function(){
   for(var i=0;i<VOCAB.length;i++){
     var w=VOCAB[i][0];
+    (WKANA[w]=WKANA[w]||{})[VOCAB[i][1]]=1;
     if(w!==VOCAB[i][1]&&/[\u4E00-\u9FFF]/.test(w)){
       KW.push(i);
       var k=VOCAB[i][1];
@@ -2850,14 +2981,16 @@ function kMut(k){
   return cands.filter(function(x){return x!==k&&x.length>0;});
 }
 var Kq={mode:0,i:-1,opts:[],ans:"",done:false,pick:"",last:-1};
-function newKQ(){
+function newKQ(){setupKQ(pickQ(KW,Kq.mode===0?kSeen:wSeen,null,Kq.last));}
+function rndKQ(){setupKQ(pickUniform(KW,Kq.last));}
+function setupKQ(i){
   var seen=Kq.mode===0?kSeen:wSeen;
-  var i=pickQ(KW,seen,null,Kq.last);
   Kq.last=i;Kq.i=i;
   seen[i]=1;eSave(Kq.mode===0?"nikki_kSeen":"nikki_wSeen",seen);
   var w=VOCAB[i],set={},o=[];
   if(Kq.mode===0){
     Kq.ans=w[1];set[w[1]]=1;
+    for(var vk in WKANA[w[0]])set[vk]=1;
     var cs=shuffle(kMut(w[1]));
     for(var c=0;c<cs.length&&o.length<3;c++)if(!set[cs[c]]){set[cs[c]]=1;o.push(cs[c]);}
     var g1=0;
@@ -2880,6 +3013,7 @@ function renderKQuiz(){
   var head="<div class='rowline'>"+
     "<button class='btn mini"+(Kq.mode===0?" primary":"")+"' id='kM0'>漢字→讀音</button>"+
     "<button class='btn mini"+(Kq.mode===1?" primary":"")+"' id='kM1'>讀音→漢字</button>"+
+    "<button class='btn mini' id='kRand'>隨機</button>"+
     "<span class='grow'></span><span class='score'>可考詞 "+KW.length+" 個</span></div>";
   var body;
   if(Kq.i<0){
@@ -2913,6 +3047,7 @@ function renderKQuiz(){
   view.innerHTML=head+body;
   document.getElementById("kM0").onclick=function(){if(Kq.mode!==0){Kq.mode=0;if(Kq.i!==-1)newKQ();else renderKQuiz();}};
   document.getElementById("kM1").onclick=function(){if(Kq.mode!==1){Kq.mode=1;if(Kq.i!==-1)newKQ();else renderKQuiz();}};
+  document.getElementById("kRand").onclick=rndKQ;
   var st=document.getElementById("kStart");
   if(st)st.onclick=newKQ;
   var pl=document.getElementById("kPlay");
@@ -3018,6 +3153,16 @@ function genNum(){
 }
 var Ls={mode:0,i:-1,opts:null,done:false,pick:-1,pickS:"",num:null,last:-1};
 function newLQ(){
+  if(Ls.mode===0)lSetup(pickQ(rng(VOCAB.length),lSeen,null,Ls.last));
+  else if(Ls.mode===1)lSetup(pickQ(rng(DATA.length),sSeen,null,Ls.last));
+  else lSetup(-1);
+}
+function rndLQ(){
+  if(Ls.mode===0)lSetup(pickUniform(rng(VOCAB.length),Ls.last));
+  else if(Ls.mode===1)lSetup(pickUniform(rng(DATA.length),Ls.last));
+  else lSetup(-1);
+}
+function lSetup(i){
   Ls.done=false;Ls.pick=-1;Ls.pickS="";Ls.num=null;
   if(Ls.mode===2){
     Ls.i=0;
@@ -3027,7 +3172,6 @@ function newLQ(){
     return;
   }
   if(Ls.mode===0){
-    var i=pickQ(rng(VOCAB.length),lSeen,null,Ls.last);
     Ls.last=i;Ls.i=i;
     lSeen[i]=1;eSave("nikki_lSeen",lSeen);
     var used={};used[VOCAB[i][3]]=1;
@@ -3035,6 +3179,7 @@ function newLQ(){
     while(cand.length<3&&g<900){
       g++;
       var j=Math.floor(Math.random()*VOCAB.length);
+      if(VOCAB[j][0]===VOCAB[i][0])continue;
       var gl=VOCAB[j][3];
       if(!used[gl]){used[gl]=1;cand.push(j);}
     }
@@ -3043,7 +3188,7 @@ function newLQ(){
     speak(VOCAB[i][1],false);
     return;
   }
-  var i2=pickQ(rng(DATA.length),sSeen,null,Ls.last);
+  var i2=i;
   Ls.last=i2;Ls.i=i2;
   sSeen[i2]=1;eSave("nikki_sSeen2",sSeen);
   var used2={};used2[DATA[i2].zh]=1;
@@ -3067,6 +3212,7 @@ function renderListen(){
     "<button class='btn mini"+(Ls.mode===0?" primary":"")+"' id='lM0'>單字</button>"+
     "<button class='btn mini"+(Ls.mode===1?" primary":"")+"' id='lM1'>句子</button>"+
     "<button class='btn mini"+(Ls.mode===2?" primary":"")+"' id='lM2'>數字</button>"+
+    "<button class='btn mini' id='lRand'>隨機</button>"+
     "<span class='grow'></span></div>";
   var body;
   if(Ls.i<0){
@@ -3128,6 +3274,8 @@ function renderListen(){
   if(sl)sl.onclick=function(){lReplay(true);};
   var nx=document.getElementById("lNext");
   if(nx)nx.onclick=newLQ;
+  var lr=document.getElementById("lRand");
+  if(lr)lr.onclick=rndLQ;
   if(Ls.i>=0&&!Ls.done){
     var obs=view.querySelectorAll(".opt");
     for(var b=0;b<obs.length;b++){
@@ -3287,10 +3435,10 @@ function newKanaQ(){
   renderKana();
 }
 function kanaChartHTML(){
-  var secs=[["清音",SEI],["濁音・半濁音",DAKU],["拗音",YOU]];
+  var secs=[["清音",SEI,"sei"],["濁音・半濁音",DAKU,"daku"],["拗音",YOU,"you"]];
   var h="";
   for(var s=0;s<secs.length;s++){
-    h+="<p class='sec-t'"+(s===0?" style='margin-top:0'":"")+">"+secs[s][0]+"</p>";
+    h+="<p class='sec-t'"+(s===0?" style='margin-top:0'":"")+">"+secs[s][0]+"　<button class='btn mini' data-seq='kana:"+secs[s][2]+"'>▶ 連續朗讀</button></p>";
     var groups=secs[s][1];
     for(var i=0;i<groups.length;i++){
       var ks=groups[i][0].split(","),rs=groups[i][1].split(",");
@@ -3312,7 +3460,7 @@ function renderKana(){
   var head,body;
   if(Ks.mode==="chart"){
     head="<div class='rowline'>"+modeBtns+"<span class='grow'></span>"+scriptBtns+"</div>";
-    body="<div class='card'>"+kanaChartHTML()+"<p class='score' style='margin:14px 0 0'>點任一假名可播放發音。</p></div>";
+    body="<div class='card'>"+kanaChartHTML()+"<p class='score' style='margin:14px 0 0'>點任一假名可播放發音；按右鍵（手機長按）可複製。</p></div>";
   }else{
     var setSel="<select id='kSet'>"+
       "<option value='sei'"+(Ks.set==="sei"?" selected":"")+">清音</option>"+
@@ -3362,7 +3510,9 @@ function renderKana(){
   var cells=view.querySelectorAll(".kcell");
   for(var c=0;c<cells.length;c++){
     cells[c].onclick=function(){speak(this.getAttribute("data-k"),false);};
+    cells[c].oncontextmenu=function(e){e.preventDefault();copyText(this.getAttribute("data-k"));return false;};
   }
+  seqBtnsRefresh();
   var ks=document.getElementById("kSet");
   if(ks)ks.onchange=function(){Ks.set=this.value;Ks.q=null;Ks.right=0;Ks.total=0;Ks.lastKana="";renderKana();};
   var st=document.getElementById("kStart");
@@ -3455,6 +3605,73 @@ function scheduleSync(){
   syncTimer=setTimeout(pushSync,8000);
 }
 
+/* ---------- 資料自檢 ---------- */
+function selfTest(){
+  var msgs=[],n=0,i,j,k,bad;
+  function chk(name,cond,detail){n++;if(!cond)msgs.push("✗ "+name+(detail?"："+detail:""));}
+  function furiOK(s){
+    var d=0;
+    for(var x=0;x<s.length;x++){
+      var c=s[x];
+      if(c==="["){
+        if(d||x===0||!/[\u4E00-\u9FFF\u3005]/.test(s[x-1]))return false;
+        d=1;
+      }else if(c==="]"){
+        if(!d)return false;d=0;
+      }else if(d&&!/[\u3041-\u3096ー]/.test(c))return false;
+    }
+    return d===0;
+  }
+  chk("VOCAB＝VEX 對齊",VOCAB.length===VEX.length,VOCAB.length+"／"+VEX.length);
+  chk("GR＝GRZH＝GRRM 對齊",GR.length===GRZH.length&&GR.length===GRRM.length);
+  bad=0;for(i=0;i<VOCAB.length;i++)if(!(VOCAB[i].length===4&&VOCAB[i][0]&&VOCAB[i][1]&&VOCAB[i][3]))bad++;
+  chk("VOCAB 欄位完整",bad===0,bad+" 筆");
+  bad=0;for(i=0;i<VEX.length;i++)if(!furiOK(VEX[i][0]))bad++;
+  chk("VEX 注音格式",bad===0,bad+" 筆");
+  bad=0;for(i=0;i<DATA.length;i++)if(!furiOK(DATA[i].jp))bad++;
+  chk("例句注音格式",bad===0,bad+" 筆");
+  bad=0;
+  for(i=0;i<GR.length;i++){
+    if(GR[i].length<6){bad++;continue;}
+    var s2={};
+    for(k=1;k<=4;k++){if(!GR[i][k]||s2[GR[i][k]])bad++;s2[GR[i][k]]=1;}
+  }
+  chk("文法題四選項相異",bad===0,bad+" 處");
+  bad=0;
+  for(i=0;i<RD.length;i++){
+    if(!furiOK(RD[i][1].replace(/<[^>]*>/g,"")))bad++;
+    for(j=0;j<RD[i][3].length;j++){
+      var q=RD[i][3][j],s3={};
+      for(k=1;k<=4;k++){if(!q[k]||s3[q[k]])bad++;s3[q[k]]=1;}
+    }
+  }
+  chk("閱讀文章與選項",bad===0,bad+" 處");
+  bad=0;for(i=0;i<GS.length;i++)for(j=0;j<GS[i][3].length;j++){var t=GS[i][3][j];if(!(t>=1&&t<=GR.length))bad++;}
+  chk("文法例句的文法點編號",bad===0,bad+" 處");
+  bad=0;
+  for(i=0;i<KANJI.length;i++){
+    var ch=KANJI[i][0],reads=(KANJI[i][1]+"、"+KANJI[i][2]).split("、");
+    var mm=KEX[ch];
+    if(!mm){bad++;continue;}
+    for(var rk in mm){
+      if(reads.indexOf(rk)<0)bad++;
+      var v=mm[rk];
+      if(typeof v==="number"){if(!(v>=0&&v<VOCAB.length))bad++;}
+      else if(!(v.length===4&&furiOK(v[2])))bad++;
+    }
+  }
+  chk("漢字例句對照（KEX）",bad===0,bad+" 處");
+  bad=0;for(i=0;i<GLSEC.length;i++)if(!(GLSEC[i][1]>=0&&GLSEC[i][1]<=GLSEC[i][2]&&GLSEC[i][2]<GR.length))bad++;
+  chk("文法分組範圍",bad===0,bad+" 處");
+  var keys=["num:ji","num:fun","num:gatsu","num:nichi","num:nin","num:tsu","num:josu","num:hyaku","num:sen"];
+  bad=0;for(i=0;i<keys.length;i++)if(!(NSEQ[keys[i]]&&NSEQ[keys[i]].length))bad++;
+  chk("數字讀法序列",bad===0,bad+" 組");
+  bad=0;for(i=0;i<VOCAB.length;i++)if(!/^[A-Za-z\s\.\,\'\-\?]+$/.test(VOCAB[i][2]))bad++;
+  chk("羅馬拼音字元",bad===0,bad+" 筆");
+  var text=(msgs.length?msgs.join("\n"):"全部通過")+"\n（共檢查 "+n+" 大項｜VOCAB "+VOCAB.length+"、KANJI "+KANJI.length+"、GR "+GR.length+"、RD "+RD.length+"、例句 "+DATA.length+"）";
+  return {ok:!msgs.length,n:n,bad:msgs.length,text:text};
+}
+
 /* ---------- 設定 ---------- */
 var modal=document.getElementById("modal");
 document.getElementById("gearBtn").onclick=function(){
@@ -3481,6 +3698,11 @@ document.getElementById("fsRange").oninput=function(){
   document.getElementById("fsVal").textContent=Math.round(settings.fs*100)+"%";
   applyFS();
   saveSettings();
+};
+document.getElementById("checkBtn").onclick=function(){
+  var r=selfTest();
+  document.getElementById("syncBox").value=r.text;
+  toast(r.ok?"自檢通過（"+r.n+" 大項）":"發現 "+r.bad+" 個問題，見下方文字框");
 };
 document.getElementById("resetBtn").onclick=function(){
   vErr={};gErr={};eSave("nikki_vErr",vErr);eSave("nikki_gErr",gErr);
