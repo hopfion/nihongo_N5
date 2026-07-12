@@ -11,6 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="ことばの手帖">
 <title>ことばの手帖</title>
 <style>
+html{font-size:calc(clamp(16px,14.3px + 0.46vw,18.5px)*var(--fscale,1));-webkit-text-size-adjust:100%}
 :root{
   --paper:#f2f1ec;
   --card:#fbfaf6;
@@ -37,8 +38,7 @@ body{
   background-image:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0) 240px);
   color:var(--ink);
   font-family:var(--ui);
-  font-size:clamp(16px,14.3px + 0.46vw,18.5px);
-  -webkit-text-size-adjust:100%;
+  font-size:1rem;
   line-height:1.65;
 }
 .wrap{max-width:760px;margin:0 auto;padding:0 16px}
@@ -311,6 +311,7 @@ button:focus-visible,select:focus-visible,.seal:focus-visible{outline:2px solid 
       <button id="closeModal" class="icon-btn" aria-label="關閉">✕</button>
     </div>
     <div class="srow"><span class="lbl">朗讀語速</span><input type="range" id="rateRange" min="0.5" max="1.2" step="0.05"><span id="rateVal" class="mut"></span></div>
+    <div class="srow"><span class="lbl">字體大小</span><input type="range" id="fsRange" min="0.85" max="1.4" step="0.05"><span id="fsVal" class="mut"></span></div>
     <div class="srow"><span class="lbl">日文語音</span><span id="voiceNote" class="mut">偵測中…</span></div>
     <div class="srow"><button id="resetBtn" class="btn danger">清除錯題紀錄</button></div>
     <div class="srow"><span class="lbl">紀錄同步</span><button id="expBtn" class="btn">匯出</button><button id="impBtn" class="btn">匯入</button></div>
@@ -421,6 +422,9 @@ function loadJSON(k,d){try{var s=store.getItem(k);return s?JSON.parse(s):d;}catc
 var settings=loadJSON("jpb_settings",{rate:0.9});
 if(!settings.v3){settings.rate=0.9;settings.v3=1;saveSettings2();}
 function saveSettings2(){try{store.setItem("jpb_settings",JSON.stringify(settings));}catch(e){}}
+if(!settings.fs)settings.fs=1;
+function applyFS(){document.documentElement.style.setProperty("--fscale",settings.fs);}
+applyFS();
 function saveSettings(){store.setItem("jpb_settings",JSON.stringify(settings));}
 
 var view=document.getElementById("view");
@@ -2513,6 +2517,8 @@ var modal=document.getElementById("modal");
 document.getElementById("gearBtn").onclick=function(){
   document.getElementById("rateRange").value=settings.rate;
   document.getElementById("rateVal").textContent=settings.rate.toFixed(2);
+  document.getElementById("fsRange").value=settings.fs;
+  document.getElementById("fsVal").textContent=Math.round(settings.fs*100)+"%";
   refreshVoices();
   document.getElementById("syncOwner").value=SYNC.owner||"";
   document.getElementById("syncRepo").value=SYNC.repo||"";
@@ -2525,6 +2531,12 @@ modal.onclick=function(e){if(e.target===modal)modal.classList.add("hidden");};
 document.getElementById("rateRange").oninput=function(){
   settings.rate=parseFloat(this.value);
   document.getElementById("rateVal").textContent=settings.rate.toFixed(2);
+  saveSettings();
+};
+document.getElementById("fsRange").oninput=function(){
+  settings.fs=parseFloat(this.value);
+  document.getElementById("fsVal").textContent=Math.round(settings.fs*100)+"%";
+  applyFS();
   saveSettings();
 };
 document.getElementById("resetBtn").onclick=function(){
