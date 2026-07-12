@@ -214,6 +214,7 @@ table.vocab td.r{font-family:Georgia,serif;font-style:italic;color:var(--indigo)
 .kex2{font-size:.88rem;line-height:2;color:var(--ink)}
 .sel{padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:transparent;font:inherit;color:var(--ink)}
 .inp{flex:1;min-width:160px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:transparent;font:inherit;color:var(--ink)}
+.syncbox{width:100%;min-height:88px;margin-top:10px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--ink);font-size:.8rem;padding:8px;box-sizing:border-box;resize:vertical}
 .vrow{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer;align-items:baseline;flex-wrap:wrap}
 .vrow:last-child{border-bottom:none}
 .vw{font-family:var(--jpserif);font-size:1.12rem;min-width:5em}
@@ -301,7 +302,7 @@ button:focus-visible,select:focus-visible,.seal:focus-visible{outline:2px solid 
 
 <footer>
   <div class="wrap">
-    <p>本頁為單一檔案，無任何外部連線，離線可用。朗讀功能使用系統內建的日文語音：macOS 於「系統設定 → 輔助使用 → 語音內容」、Windows 於「設定 → 時間與語言 → 語音」、iOS／Android 於系統語音設定下載日文語音資料後即可離線發音；未安裝時僅無聲音，其他功能不受影響。學習進度儲存在此瀏覽器的本機空間中。</p>
+    <p>本頁為單一檔案，無任何外部連線，離線可用。朗讀功能使用系統內建的日文語音：macOS 於「系統設定 → 輔助使用 → 語音內容」、Windows 於「設定 → 時間與語言 → 語音」、iOS／Android 於系統語音設定下載日文語音資料後即可離線發音；未安裝時僅無聲音，其他功能不受影響。學習進度儲存在此瀏覽器的本機空間中；跨裝置搬移可用「設定 → 紀錄同步」的匯出與匯入。</p>
   </div>
 </footer>
 
@@ -314,6 +315,12 @@ button:focus-visible,select:focus-visible,.seal:focus-visible{outline:2px solid 
     <div class="srow"><span class="lbl">朗讀語速</span><input type="range" id="rateRange" min="0.5" max="1.2" step="0.05"><span id="rateVal" class="mut"></span></div>
     <div class="srow"><span class="lbl">日文語音</span><span id="voiceNote" class="mut">偵測中…</span></div>
     <div class="srow"><button id="resetBtn" class="btn danger">清除錯題紀錄</button></div>
+    <div class="srow"><span class="lbl">紀錄同步</span><button id="expBtn" class="btn">匯出</button><button id="impBtn" class="btn">匯入</button></div>
+    <textarea id="syncBox" class="syncbox" placeholder="匯出：按「匯出」產生代碼並自動複製，用訊息或 AirDrop 傳到另一台裝置。匯入：把對方的代碼貼在這裡，按「匯入」。"></textarea>
+    <div class="srow"><span class="lbl">自動同步</span><span id="syncState" class="mut">未設定</span></div>
+    <div class="srow"><input id="syncOwner" class="inp" placeholder="GitHub 使用者名稱"><input id="syncRepo" class="inp" placeholder="repo 名稱"></div>
+    <div class="srow"><input id="syncToken" class="inp" type="password" placeholder="存取權杖 github_pat_…"></div>
+    <div class="srow"><button id="syncSave" class="btn primary">儲存並測試</button><button id="syncOff" class="btn">停用</button></div>
   </div>
 </div>
 
@@ -1266,7 +1273,11 @@ var VOCAB=[
 ["本当に", "ほんとうに", "hontouni", "真的"],
 ["日本語", "にほんご", "nihongo", "日語"]
 ];
-function eSave(k,o){try{localStorage.setItem(k,JSON.stringify(o));}catch(e){}}
+var syncMute=false;
+function eSave(k,o){
+  try{localStorage.setItem(k,JSON.stringify(o));}catch(e){}
+  if(!syncMute&&k!=="nikki_sync"&&k!=="nikki_syncmeta"&&typeof scheduleSync==="function")scheduleSync();
+}
 function eLoad(k){try{return JSON.parse(localStorage.getItem(k))||{};}catch(e){return {};}}
 var vErr=eLoad("nikki_vErr"),gErr=eLoad("nikki_gErr");
 var vSeen=eLoad("nikki_vSeen"),gSeen=eLoad("nikki_gSeen"),kSeen=eLoad("nikki_kSeen"),wSeen=eLoad("nikki_wSeen"),lSeen=eLoad("nikki_lSeen"),sSeen=eLoad("nikki_sSeen2");
@@ -2431,12 +2442,84 @@ function renderKana(){
   }
 }
 
+/* ---------- 同步 ---------- */
+var SYNC=eLoad("nikki_sync");
+var syncTimer=null,syncBusy=false,syncQueued=false;
+function syncEnabled(){return !!(SYNC&&SYNC.token&&SYNC.owner&&SYNC.repo);}
+function syncStateText(){
+  if(!syncEnabled())return "未設定";
+  var m=eLoad("nikki_syncmeta");
+  if(!m||!m.t)return "已設定，尚未同步";
+  var d=new Date(m.t),hh=("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2);
+  return (m.ok?"上次同步 ":"同步失敗 ")+hh;
+}
+function syncMeta(ok){
+  eSave("nikki_syncmeta",{t:Date.now(),ok:!!ok});
+  var el=document.getElementById("syncState");
+  if(el)el.textContent=syncStateText();
+}
+function recObj(){
+  function ks(o){return Object.keys(o).map(function(k){return parseInt(k,10);});}
+  return {ver:1,ve:ks(vErr),ge:ks(gErr),vs:ks(vSeen),gs:ks(gSeen),kn:ks(kSeen),ws:ks(wSeen),ls:ks(lSeen),ss:ks(sSeen)};
+}
+function applyRec(d){
+  function mg(o,a){if(a)for(var i=0;i<a.length;i++)o[a[i]]=1;}
+  syncMute=true;
+  mg(vErr,d.ve);mg(gErr,d.ge);mg(vSeen,d.vs);mg(gSeen,d.gs);mg(kSeen,d.kn);mg(wSeen,d.ws);mg(lSeen,d.ls);mg(sSeen,d.ss);
+  eSave("nikki_vErr",vErr);eSave("nikki_gErr",gErr);eSave("nikki_vSeen",vSeen);eSave("nikki_gSeen",gSeen);
+  eSave("nikki_kSeen",kSeen);eSave("nikki_wSeen",wSeen);eSave("nikki_lSeen",lSeen);eSave("nikki_sSeen2",sSeen);
+  syncMute=false;
+}
+function ghURL(){return "https://api.github.com/repos/"+encodeURIComponent(SYNC.owner)+"/"+encodeURIComponent(SYNC.repo)+"/contents/record.json";}
+function ghHead(){return {"Authorization":"Bearer "+SYNC.token,"Accept":"application/vnd.github+json","Content-Type":"application/json"};}
+function b64e(s){return btoa(unescape(encodeURIComponent(s)));}
+function b64d(s){return decodeURIComponent(escape(atob(s.replace(/\n/g,""))));}
+function pullSync(cb){
+  if(!syncEnabled()){if(cb)cb(false);return;}
+  fetch(ghURL(),{headers:ghHead(),cache:"no-store"}).then(function(r){
+    if(r.status===404)return null;
+    if(!r.ok)throw new Error(r.status);
+    return r.json();
+  }).then(function(j){
+    if(j===null){if(cb)cb(null);return;}
+    var d=null;
+    try{d=JSON.parse(b64d(j.content));}catch(e){}
+    if(d&&d.ver===1)applyRec(d);
+    if(cb)cb(j.sha);
+  }).catch(function(){if(cb)cb(false);});
+}
+function pushSync(){
+  if(!syncEnabled())return;
+  if(syncBusy){syncQueued=true;return;}
+  syncBusy=true;
+  pullSync(function(sha){
+    if(sha===false){syncBusy=false;syncMeta(false);return;}
+    var body={message:"sync",content:b64e(JSON.stringify(recObj()))};
+    if(sha)body.sha=sha;
+    fetch(ghURL(),{method:"PUT",headers:ghHead(),body:JSON.stringify(body)}).then(function(r){
+      syncBusy=false;
+      if(r.ok)syncMeta(true);
+      else{syncMeta(false);if(r.status===409||r.status===422)scheduleSync();}
+      if(syncQueued){syncQueued=false;scheduleSync();}
+    }).catch(function(){syncBusy=false;syncMeta(false);});
+  });
+}
+function scheduleSync(){
+  if(!syncEnabled())return;
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(pushSync,8000);
+}
+
 /* ---------- 設定 ---------- */
 var modal=document.getElementById("modal");
 document.getElementById("gearBtn").onclick=function(){
   document.getElementById("rateRange").value=settings.rate;
   document.getElementById("rateVal").textContent=settings.rate.toFixed(2);
   refreshVoices();
+  document.getElementById("syncOwner").value=SYNC.owner||"";
+  document.getElementById("syncRepo").value=SYNC.repo||"";
+  document.getElementById("syncToken").value=SYNC.token||"";
+  document.getElementById("syncState").textContent=syncStateText();
   modal.classList.remove("hidden");
 };
 document.getElementById("closeModal").onclick=function(){modal.classList.add("hidden");};
@@ -2451,6 +2534,54 @@ document.getElementById("resetBtn").onclick=function(){
   toast("已清除錯題紀錄");
   modal.classList.add("hidden");switchTab(curTab);
 };
+function packRec(){
+  function ks(o){return Object.keys(o).map(function(k){return parseInt(k,10);});}
+  return JSON.stringify({ver:1,ve:ks(vErr),ge:ks(gErr),vs:ks(vSeen),gs:ks(gSeen),kn:ks(kSeen),ws:ks(wSeen),ls:ks(lSeen),ss:ks(sSeen)});
+}
+document.getElementById("expBtn").onclick=function(){
+  var t=packRec(),box=document.getElementById("syncBox");
+  box.value=t;box.focus();box.select();
+  var ok=false;
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t);ok=true;
+  }else{
+    try{ok=document.execCommand("copy");}catch(e){}
+  }
+  toast(ok?"已產生並複製，到另一台裝置貼上匯入":"已產生，請長按全選複製");
+};
+document.getElementById("impBtn").onclick=function(){
+  var v=document.getElementById("syncBox").value.trim();
+  if(!v){toast("先把另一台裝置匯出的代碼貼進來");return;}
+  var d=null;
+  try{d=JSON.parse(v);}catch(e){}
+  if(!d||d.ver!==1){toast("代碼格式不對");return;}
+  function mg(o,a){if(a)for(var i=0;i<a.length;i++)o[a[i]]=1;}
+  mg(vErr,d.ve);mg(gErr,d.ge);mg(vSeen,d.vs);mg(gSeen,d.gs);mg(kSeen,d.kn);mg(wSeen,d.ws);mg(lSeen,d.ls);mg(sSeen,d.ss);
+  eSave("nikki_vErr",vErr);eSave("nikki_gErr",gErr);eSave("nikki_vSeen",vSeen);eSave("nikki_gSeen",gSeen);eSave("nikki_kSeen",kSeen);eSave("nikki_wSeen",wSeen);eSave("nikki_lSeen",lSeen);eSave("nikki_sSeen2",sSeen);
+  document.getElementById("syncBox").value="";
+  toast("已合併匯入");
+  modal.classList.add("hidden");switchTab(curTab);
+};
+document.getElementById("syncSave").onclick=function(){
+  var o=document.getElementById("syncOwner").value.trim();
+  var rp=document.getElementById("syncRepo").value.trim();
+  var tk=document.getElementById("syncToken").value.trim();
+  if(!o||!rp||!tk){toast("三個欄位都要填");return;}
+  SYNC={owner:o,repo:rp,token:tk};
+  eSave("nikki_sync",SYNC);
+  toast("測試連線中…");
+  pullSync(function(res){
+    if(res===false){toast("連不上：檢查使用者名、repo 名或權杖");return;}
+    pushSync();
+    switchTab(curTab);
+    toast("同步已啟用");
+  });
+};
+document.getElementById("syncOff").onclick=function(){
+  SYNC={};eSave("nikki_sync",SYNC);
+  document.getElementById("syncState").textContent="未設定";
+  toast("已停用自動同步");
+};
 
 /* ---------- 啟動 ---------- */
 var tabBtns=document.querySelectorAll(".tab");
@@ -2462,6 +2593,13 @@ if(window.speechSynthesis){
   speechSynthesis.onvoiceschanged=refreshVoices;
 }
 switchTab("learn");
+if(syncEnabled()){
+  pullSync(function(){switchTab(curTab);});
+}
+window.addEventListener("online",function(){if(syncEnabled())scheduleSync();});
+document.addEventListener("visibilitychange",function(){
+  if(document.visibilityState==="hidden"&&syncEnabled()){clearTimeout(syncTimer);pushSync();}
+});
 </script>
 <script>
 if("serviceWorker" in navigator){
