@@ -1,0 +1,2474 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f2f1ec">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ことばの手帖">
+<title>ことばの手帖</title>
+<style>
+:root{
+  --paper:#f2f1ec;
+  --card:#fbfaf6;
+  --ink:#1f2a33;
+  --mut:#6e7671;
+  --line:#dcdcd2;
+  --indigo:#2e4e6b;
+  --indigo-deep:#223b52;
+  --seal:#b2422f;
+  --seal-soft:#f4e4df;
+  --wash:#e9ebe2;
+  --good:#2e6e4e;
+  --good-bg:#e7f0ea;
+  --bad:#a5392c;
+  --bad-bg:#f6e6e2;
+  --rt:#8a7f66;
+  --jpserif:"Hiragino Mincho ProN","Hiragino Mincho Pro","Yu Mincho","YuMincho","Noto Serif CJK JP","Noto Serif JP","MS PMincho",serif;
+  --ui:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Sans","Yu Gothic UI","Noto Sans CJK JP","PingFang TC","Microsoft JhengHei",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  background-image:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0) 240px);
+  color:var(--ink);
+  font-family:var(--ui);
+  font-size:16px;
+  line-height:1.65;
+}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+
+/* ---- 書封式頁首 ---- */
+header{border-bottom:1px solid var(--line)}
+.cover{display:flex;align-items:stretch;gap:16px;padding:22px 0 14px}
+.spine{
+  writing-mode:vertical-rl;
+  font-family:var(--jpserif);
+  font-size:1.05rem;
+  letter-spacing:.35em;
+  color:#fff;
+  background:var(--indigo);
+  padding:14px 8px;
+  border-radius:3px;
+  align-self:stretch;
+  display:flex;align-items:center;
+  user-select:none;
+}
+.cover-main{flex:1;display:flex;flex-direction:column;justify-content:center;min-width:0}
+.cover-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{
+  font-family:var(--jpserif);
+  font-weight:600;
+  font-size:1.75rem;
+  margin:0;
+  letter-spacing:.06em;
+}
+.head-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.badge{
+  font-size:.78rem;color:var(--indigo-deep);
+  background:var(--wash);border:1px solid var(--line);
+  border-radius:999px;padding:3px 10px;white-space:nowrap;
+}
+.seal{
+  width:34px;height:34px;flex-shrink:0;
+  border:2px solid var(--seal);color:var(--seal);
+  border-radius:6px;
+  font-family:var(--jpserif);font-size:1.05rem;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+  background:transparent;cursor:pointer;
+}
+.seal:hover{background:var(--seal-soft)}
+
+/* ---- 分頁 ---- */
+nav#tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav#tabs::-webkit-scrollbar{display:none}
+.tab{
+  appearance:none;background:none;border:none;cursor:pointer;
+  font-family:var(--ui);font-size:.95rem;font-weight:600;color:var(--mut);
+  padding:10px 12px 12px;border-bottom:3px solid transparent;white-space:nowrap;
+}
+.tab.on{color:var(--ink);border-bottom-color:var(--seal)}
+
+main{padding:18px 0 8px;min-height:60vh}
+
+/* ---- 通用元件 ---- */
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:20px 22px;margin-bottom:14px;
+  box-shadow:0 1px 2px rgba(40,45,50,.05),0 10px 26px -18px rgba(40,45,50,.25);
+}
+@media (prefers-reduced-motion:no-preference){
+  .card{animation:rise .18s ease-out}
+  @keyframes rise{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+}
+.btn{
+  appearance:none;cursor:pointer;
+  font-family:var(--ui);font-size:.92rem;font-weight:600;
+  color:var(--ink);background:#fff;border:1px solid var(--line);
+  border-radius:999px;padding:8px 16px;
+}
+.btn:hover{border-color:var(--indigo)}
+.btn.primary{background:var(--indigo);border-color:var(--indigo);color:#fff}
+.btn.primary:hover{background:var(--indigo-deep)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:default}
+.mini{
+  appearance:none;cursor:pointer;font-size:.78rem;font-weight:600;
+  color:var(--mut);background:#fff;border:1px solid var(--line);
+  border-radius:6px;padding:3px 9px;
+}
+.mini.act{background:var(--indigo);border-color:var(--indigo);color:#fff}
+select{
+  font-family:var(--ui);font-size:.9rem;color:var(--ink);
+  background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 10px;
+}
+.rowline{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.rowline .grow{flex:1}
+.score{font-size:.85rem;color:var(--mut)}
+
+/* ---- 例句卡 ---- */
+.jp{
+  font-family:var(--jpserif);
+  font-size:1.5rem;line-height:2.3;
+  margin:4px 0 2px;
+}
+ruby rt{font-size:.5em;color:var(--rt);font-weight:400;letter-spacing:0}
+.hide-rt rt{display:none}
+.romaji{font-family:Georgia,"Times New Roman",serif;font-style:italic;color:var(--indigo);font-size:1rem;margin:0 0 2px}
+.zh{font-size:1.02rem;margin:2px 0 0}
+.tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.tools .sp{flex:1}
+.scene{
+  background:var(--wash);border-left:3px solid var(--indigo);
+  border-radius:0 8px 8px 0;padding:10px 14px;margin:0;
+  font-size:.92rem;
+}
+.sec-t{
+  font-size:.78rem;font-weight:700;letter-spacing:.18em;color:var(--seal);
+  margin:20px 0 6px;
+}
+table.vocab{width:100%;border-collapse:collapse;font-size:.92rem}
+table.vocab th{
+  text-align:left;font-size:.75rem;font-weight:600;color:var(--mut);
+  letter-spacing:.08em;padding:4px 8px;border-bottom:1px solid var(--line);
+}
+table.vocab td{padding:7px 8px;border-bottom:1px dashed var(--line);vertical-align:top}
+table.vocab td.w{font-family:var(--jpserif);font-size:1.05rem}
+table.vocab td.k{color:var(--rt)}
+table.vocab td.r{font-family:Georgia,serif;font-style:italic;color:var(--indigo)}
+.gp{margin:0 0 10px;font-size:.92rem}
+.gp b{color:var(--indigo-deep);font-family:var(--jpserif);font-weight:600;margin-right:6px}
+.navr{display:flex;align-items:center;justify-content:space-between;margin-top:14px}
+.pos{font-size:.85rem;color:var(--mut)}
+
+/* ---- 測驗 ---- */
+.opts{display:flex;flex-direction:column;gap:9px;margin-top:14px}
+.opt{
+  appearance:none;cursor:pointer;text-align:left;
+  font-family:var(--ui);font-size:.98rem;color:var(--ink);
+  background:#fff;border:1px solid var(--line);border-radius:10px;
+  padding:11px 15px;
+}
+.opt:hover{border-color:var(--indigo)}
+.opt.correct{background:var(--good-bg);border-color:var(--good);color:var(--good);font-weight:700}
+.opt.wrong{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.opt:disabled{cursor:default}
+.opts.two{flex-direction:row;flex-wrap:wrap}
+.opts.two .opt{flex:1 1 40%;text-align:center;font-family:Georgia,serif;font-size:1.05rem}
+.reveal{border-top:1px dashed var(--line);margin-top:18px;padding-top:14px}
+.centerc{text-align:center;padding:26px 0}
+
+/* ---- 五十音 ---- */
+.krow{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.kcell{
+  appearance:none;cursor:pointer;
+  min-width:54px;padding:7px 6px;text-align:center;
+  border:1px solid var(--line);border-radius:8px;background:#fff;
+  font-family:var(--ui);
+}
+.kcell:hover{border-color:var(--indigo)}
+.kcell .kk{font-family:var(--jpserif);font-size:1.35rem;display:block;line-height:1.35;color:var(--ink)}
+.kcell .kr{font-size:.68rem;color:var(--mut)}
+.kbig{font-family:var(--jpserif);font-size:4.2rem;text-align:center;margin:6px 0 2px;line-height:1.25}
+.qword{font-family:var(--jpserif);font-size:2.4rem;text-align:center;margin:10px 0 4px;line-height:1.5}
+.krow{display:flex;gap:14px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+.krow:last-child{border-bottom:none}
+.kchar{font-family:var(--jpserif);font-size:2.1rem;min-width:52px;text-align:center;line-height:1.2}
+.kinfo{flex:1;min-width:0}
+.kread{font-size:.9rem;color:var(--ink);margin:2px 0}
+.ksep{color:var(--faint);margin:0 6px}
+.kex{font-size:.85rem;color:var(--sub);margin:2px 0 0}
+.krd{cursor:pointer;border-bottom:1px dashed var(--faint)}
+.gitem{padding:12px 0;border-bottom:1px solid var(--line)}
+.gitem:last-child{border-bottom:none}
+.gt{margin:0 0 2px;font-size:1.02rem}
+.gnum{color:var(--faint);font-size:.85rem;margin-right:6px}
+.gexp{font-size:.9rem;color:var(--sub);margin:0 0 6px}
+.gsm{font-size:1.12rem !important;margin:4px 0 2px}
+.gsm2{font-size:.92rem;margin:0 0 6px}
+.btn.mini{padding:4px 12px;font-size:.78rem}
+.kex2{font-size:.88rem;line-height:2;color:var(--ink)}
+.sel{padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:transparent;font:inherit;color:var(--ink)}
+.inp{flex:1;min-width:160px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:transparent;font:inherit;color:var(--ink)}
+.vrow{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer;align-items:baseline;flex-wrap:wrap}
+.vrow:last-child{border-bottom:none}
+.vw{font-family:var(--jpserif);font-size:1.12rem;min-width:5em}
+.vk{color:var(--sub);font-size:.95rem}
+.vr{color:var(--faint);font-size:.85rem}
+.vz{margin-left:auto;text-align:right;font-size:.95rem}
+.chunkwrap{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chunk{padding:8px 14px;border:1.5px solid var(--line);border-radius:10px;background:transparent;font-family:var(--jpserif);font-size:1.05rem;cursor:pointer;color:var(--ink)}
+.chunk.used{opacity:.3;pointer-events:none}
+.ansline{min-height:2.4em;border:1.5px dashed var(--line);border-radius:10px;padding:10px 12px;margin-top:4px;font-family:var(--jpserif);font-size:1.12rem;line-height:2}
+.ansline.ok{border-style:solid;border-color:#3e7d4f;background:rgba(62,125,79,.08)}
+.ansline.bad{border-style:solid;border-color:#b3564d;background:rgba(179,86,77,.08)}
+.faintt{color:var(--faint);font-size:.9rem;font-family:inherit}
+
+/* ---- 設定 ---- */
+.overlay{
+  position:fixed;inset:0;background:rgba(31,42,51,.4);
+  display:flex;align-items:center;justify-content:center;padding:20px;z-index:50;
+}
+.hidden{display:none}
+.sheet{background:var(--card);border-radius:14px;padding:20px 22px;width:100%;max-width:420px;border:1px solid var(--line)}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.sheet-head h2{font-family:var(--jpserif);font-size:1.2rem;margin:0}
+.icon-btn{appearance:none;background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--mut)}
+.srow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:.93rem}
+.srow:last-child{border-bottom:none}
+.srow .lbl{flex-shrink:0}
+.srow input[type=range]{flex:1}
+.srow .mut{color:var(--mut);font-size:.85rem}
+
+footer{border-top:1px solid var(--line);margin-top:26px}
+footer p{color:var(--mut);font-size:.78rem;line-height:1.7;padding:14px 0 26px;margin:0}
+
+#toast{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%);
+  background:var(--ink);color:#fff;font-size:.88rem;
+  padding:9px 18px;border-radius:999px;z-index:60;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+#toast.show{opacity:1}
+
+button:focus-visible,select:focus-visible,.seal:focus-visible{outline:2px solid var(--seal);outline-offset:2px}
+
+@media (max-width:560px){
+  h1{font-size:1.4rem}
+  .jp{font-size:1.32rem}
+  .card{padding:16px 15px}
+  .spine{font-size:.9rem;padding:10px 6px}
+  .kbig{font-size:3.2rem}
+  .qword{font-size:1.9rem}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="cover">
+      <div class="spine">ことばの手帖</div>
+      <div class="cover-main">
+        <div class="cover-top">
+          <h1>ことばの手帖</h1>
+          <div class="head-right">
+            <button id="gearBtn" class="seal" title="設定" aria-label="設定">設</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <nav id="tabs">
+      <button class="tab on" data-tab="learn">例句學習</button>
+      <button class="tab" data-tab="glearn">文法學習</button>
+      <button class="tab" data-tab="gsent">文法例句</button>
+      <button class="tab" data-tab="kanji">漢字</button>
+      <button class="tab" data-tab="vbook">單字本</button>
+      <button class="tab" data-tab="grammar">文法測驗</button>
+      <button class="tab" data-tab="kquiz">漢字測驗</button>
+      <button class="tab" data-tab="vocab">單字測驗</button>
+      <button class="tab" data-tab="listen">聽力測驗</button>
+      <button class="tab" data-tab="reading">閱讀</button>
+      <button class="tab" data-tab="kana">五十音</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" id="view"></main>
+
+<footer>
+  <div class="wrap">
+    <p>本頁為單一檔案，無任何外部連線，離線可用。朗讀功能使用系統內建的日文語音：macOS 於「系統設定 → 輔助使用 → 語音內容」、Windows 於「設定 → 時間與語言 → 語音」、iOS／Android 於系統語音設定下載日文語音資料後即可離線發音；未安裝時僅無聲音，其他功能不受影響。學習進度儲存在此瀏覽器的本機空間中。</p>
+  </div>
+</footer>
+
+<div id="modal" class="overlay hidden">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>設定</h2>
+      <button id="closeModal" class="icon-btn" aria-label="關閉">✕</button>
+    </div>
+    <div class="srow"><span class="lbl">朗讀語速</span><input type="range" id="rateRange" min="0.5" max="1.2" step="0.05"><span id="rateVal" class="mut"></span></div>
+    <div class="srow"><span class="lbl">日文語音</span><span id="voiceNote" class="mut">偵測中…</span></div>
+    <div class="srow"><button id="resetBtn" class="btn danger">清除錯題紀錄</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+var SEI=[
+["あ,い,う,え,お","a,i,u,e,o"],
+["か,き,く,け,こ","ka,ki,ku,ke,ko"],
+["さ,し,す,せ,そ","sa,shi,su,se,so"],
+["た,ち,つ,て,と","ta,chi,tsu,te,to"],
+["な,に,ぬ,ね,の","na,ni,nu,ne,no"],
+["は,ひ,ふ,へ,ほ","ha,hi,fu,he,ho"],
+["ま,み,む,め,も","ma,mi,mu,me,mo"],
+["や,ゆ,よ","ya,yu,yo"],
+["ら,り,る,れ,ろ","ra,ri,ru,re,ro"],
+["わ,を,ん","wa,o,n"]
+];
+var DAKU=[
+["が,ぎ,ぐ,げ,ご","ga,gi,gu,ge,go"],
+["ざ,じ,ず,ぜ,ぞ","za,ji,zu,ze,zo"],
+["だ,ぢ,づ,で,ど","da,ji,zu,de,do"],
+["ば,び,ぶ,べ,ぼ","ba,bi,bu,be,bo"],
+["ぱ,ぴ,ぷ,ぺ,ぽ","pa,pi,pu,pe,po"]
+];
+var YOU=[
+["きゃ,きゅ,きょ","kya,kyu,kyo"],
+["しゃ,しゅ,しょ","sha,shu,sho"],
+["ちゃ,ちゅ,ちょ","cha,chu,cho"],
+["にゃ,にゅ,にょ","nya,nyu,nyo"],
+["ひゃ,ひゅ,ひょ","hya,hyu,hyo"],
+["みゃ,みゅ,みょ","mya,myu,myo"],
+["りゃ,りゅ,りょ","rya,ryu,ryo"],
+["ぎゃ,ぎゅ,ぎょ","gya,gyu,gyo"],
+["じゃ,じゅ,じょ","ja,ju,jo"],
+["びゃ,びゅ,びょ","bya,byu,byo"],
+["ぴゃ,ぴゅ,ぴょ","pya,pyu,pyo"]
+];
+var DATA=[
+{"cat":"n5a","jp":"私[わたし]は台湾[たいわん]から来[き]た学生[がくせい]です。","kana":"わたしはたいわんからきたがくせいです。","romaji":"Watashi wa Taiwan kara kita gakusei desu.","zh":"我是從台灣來的學生。","scene":"自我介紹的基本句。","vocab":[["私","わたし","watashi","我"],["学生","がくせい","gakusei","學生"],["来る","くる","kuru","來"]],"grammar":[["〜は〜です","最基本的判斷句「A是B」。"],["た形＋名詞","用短句修飾名詞：從台灣來的→學生。"]]},
+{"cat":"n5a","jp":"これは日本語[にほんご]の辞書[じしょ]です。","kana":"これはにほんごのじしょです。","romaji":"Kore wa nihongo no jisho desu.","zh":"這是日語辭典。","scene":"介紹眼前的東西。","vocab":[["これ","これ","kore","這個"],["辞書","じしょ","jisho","辭典"]],"grammar":[["これ／それ／あれ","指示詞，依距離分「這／那／那（遠）」。"],["名詞＋の＋名詞","「～的…」。"]]},
+{"cat":"n5a","jp":"お手洗[てあら]いは二階[にかい]にあります。","kana":"おてあらいはにかいにあります。","romaji":"Otearai wa nikai ni arimasu.","zh":"洗手間在二樓。","scene":"指引地點。","vocab":[["お手洗い","おてあらい","otearai","洗手間"],["二階","にかい","nikai","二樓"]],"grammar":[["〜は〜にあります","「（無生命物）在～」；場所用助詞「に」。"]]},
+{"cat":"n5a","jp":"教室[きょうしつ]に学生[がくせい]が三人[さんにん]います。","kana":"きょうしつにがくせいがさんにんいます。","romaji":"Kyoushitsu ni gakusei ga sannin imasu.","zh":"教室裡有三個學生。","scene":"描述某處有什麼人。","vocab":[["教室","きょうしつ","kyoushitsu","教室"],["三人","さんにん","sannin","三個人"]],"grammar":[["います／あります","有生命用「います」、無生命用「あります」。"],["數量詞","放在動詞前面：三人います。"]]},
+{"cat":"n5a","jp":"明日[あした]は休[やす]みじゃありません。","kana":"あしたはやすみじゃありません。","romaji":"Ashita wa yasumi ja arimasen.","zh":"明天不是假日。","scene":"否定的基本說法。","vocab":[["明日","あした","ashita","明天"],["休み","やすみ","yasumi","休假、休息"]],"grammar":[["〜じゃありません","「〜です」的否定；也作「〜ではありません」。"]]},
+{"cat":"n5a","jp":"あの人[ひと]は誰[だれ]ですか。","kana":"あのひとはだれですか。","romaji":"Ano hito wa dare desu ka.","zh":"那個人是誰？","scene":"詢問身分。","vocab":[["あの","あの","ano","那個（遠）"],["誰","だれ","dare","誰"]],"grammar":[["〜か","句尾加「か」構成疑問句，日文可以不用問號。"]]},
+{"cat":"n5b","jp":"この店[みせ]のラーメンは安[やす]くておいしいです。","kana":"このみせのラーメンはやすくておいしいです。","romaji":"Kono mise no raamen wa yasukute oishii desu.","zh":"這家店的拉麵又便宜又好吃。","scene":"推薦店家。","vocab":[["店","みせ","mise","店"],["安い","やすい","yasui","便宜的"],["おいしい","おいしい","oishii","好吃的"]],"grammar":[["い形容詞＋くて","連接兩個形容詞「又～又…」。"]]},
+{"cat":"n5b","jp":"昨日[きのう]の映画[えいが]はあまり面白[おもしろ]くなかったです。","kana":"きのうのえいがはあまりおもしろくなかったです。","romaji":"Kinou no eiga wa amari omoshirokunakatta desu.","zh":"昨天的電影不太有趣。","scene":"說過去的感想。","vocab":[["昨日","きのう","kinou","昨天"],["映画","えいが","eiga","電影"]],"grammar":[["い形容詞過去否定","面白い→面白くなかった。"],["あまり＋否定","「不太～」。"]]},
+{"cat":"n5b","jp":"東京[とうきょう]は大阪[おおさか]よりにぎやかです。","kana":"とうきょうはおおさかよりにぎやかです。","romaji":"Toukyou wa Oosaka yori nigiyaka desu.","zh":"東京比大阪熱鬧。","scene":"兩者比較。","vocab":[["にぎやか","にぎやか","nigiyaka","熱鬧"]],"grammar":[["AはBより〜","「A比B～」；な形容詞直接接です。"]]},
+{"cat":"n5b","jp":"果物[くだもの]の中[なか]で、りんごがいちばん好[す]きです。","kana":"くだもののなかで、りんごがいちばんすきです。","romaji":"Kudamono no naka de, ringo ga ichiban suki desu.","zh":"水果之中，我最喜歡蘋果。","scene":"說最喜歡的東西。","vocab":[["果物","くだもの","kudamono","水果"],["いちばん","いちばん","ichiban","最"]],"grammar":[["〜の中でAがいちばん〜","範圍內的最高級。"],["〜が好き","喜歡的對象用「が」。"]]},
+{"cat":"n5b","jp":"静[しず]かな部屋[へや]で勉強[べんきょう]したいです。","kana":"しずかなへやでべんきょうしたいです。","romaji":"Shizuka na heya de benkyou shitai desu.","zh":"想在安靜的房間裡念書。","scene":"表達希望的環境。","vocab":[["静か","しずか","shizuka","安靜"],["勉強","べんきょう","benkyou","學習、念書"]],"grammar":[["な形容詞＋な＋名詞","修飾名詞時加「な」。"],["場所＋で","動作發生的地點。"]]},
+{"cat":"n5b","jp":"天気[てんき]がよくなりました。","kana":"てんきがよくなりました。","romaji":"Tenki ga yoku narimashita.","zh":"天氣變好了。","scene":"描述變化。","vocab":[["天気","てんき","tenki","天氣"],["いい・よい","いい・よい","ii, yoi","好的"]],"grammar":[["い形容詞＋くなる","「變得～」；「いい」的變化要用「よく」。"]]},
+{"cat":"n5c","jp":"毎朝[まいあさ]七時[しちじ]に起[お]きます。","kana":"まいあさしちじにおきます。","romaji":"Maiasa shichiji ni okimasu.","zh":"每天早上七點起床。","scene":"描述日常作息。","vocab":[["毎朝","まいあさ","maiasa","每天早上"],["起きる","おきる","okiru","起床"]],"grammar":[["時間＋に","具體時刻後接「に」；「毎朝」這類詞不加。"]]},
+{"cat":"n5c","jp":"学校[がっこう]は九時[くじ]から三時[さんじ]までです。","kana":"がっこうはくじからさんじまでです。","romaji":"Gakkou wa kuji kara sanji made desu.","zh":"學校從九點到三點。","scene":"說明起訖時間。","vocab":[["学校","がっこう","gakkou","學校"]],"grammar":[["〜から〜まで","「從～到～」，時間、地點都能用。"]]},
+{"cat":"n5c","jp":"バスで駅[えき]へ行[い]きます。","kana":"バスでえきへいきます。","romaji":"Basu de eki e ikimasu.","zh":"搭公車去車站。","scene":"說明交通方式。","vocab":[["バス","バス","basu","公車"],["駅","えき","eki","車站"]],"grammar":[["交通工具＋で","表示手段。"],["場所＋へ","移動的方向；助詞「へ」讀作 e。"]]},
+{"cat":"n5c","jp":"友達[ともだち]と公園[こうえん]を散歩[さんぽ]しました。","kana":"ともだちとこうえんをさんぽしました。","romaji":"Tomodachi to kouen o sanpo shimashita.","zh":"和朋友在公園散了步。","scene":"聊週末做了什麼。","vocab":[["友達","ともだち","tomodachi","朋友"],["散歩","さんぽ","sanpo","散步"]],"grammar":[["人＋と","「和～一起」。"],["經過場所＋を","散歩する等移動動詞的路徑用「を」。"]]},
+{"cat":"n5c","jp":"日曜日[にちようび]は何[なに]もしませんでした。","kana":"にちようびはなにもしませんでした。","romaji":"Nichiyoubi wa nani mo shimasen deshita.","zh":"星期天什麼也沒做。","scene":"聊假日。","vocab":[["日曜日","にちようび","nichiyoubi","星期天"]],"grammar":[["疑問詞＋も＋否定","「什麼也不～、誰也不～」。"],["〜ませんでした","ます形的過去否定。"]]},
+{"cat":"n5c","jp":"宿題[しゅくだい]はもう終[お]わりましたか。――まだです。","kana":"しゅくだいはもうおわりましたか。まだです。","romaji":"Shukudai wa mou owarimashita ka. -- Mada desu.","zh":"作業已經寫完了嗎？——還沒。","scene":"確認進度的問答。","vocab":[["宿題","しゅくだい","shukudai","作業"],["終わる","おわる","owaru","結束"]],"grammar":[["もう／まだ","「已經～了嗎」用もう；回答「還沒」用「まだです」。"]]},
+{"cat":"n5d","jp":"兄[あに]は今[いま]、音楽[おんがく]を聞[き]いています。","kana":"あにはいま、おんがくをきいています。","romaji":"Ani wa ima, ongaku o kiite imasu.","zh":"哥哥現在正在聽音樂。","scene":"描述正在進行的動作。","vocab":[["兄","あに","ani","（自己的）哥哥"],["音楽","おんがく","ongaku","音樂"]],"grammar":[["〜ています（進行）","「正在～」；聞く→聞いて。"]]},
+{"cat":"n5d","jp":"父[ちち]は銀行[ぎんこう]で働[はたら]いています。","kana":"ちちはぎんこうではたらいています。","romaji":"Chichi wa ginkou de hataraite imasu.","zh":"爸爸在銀行工作。","scene":"介紹家人的職業。","vocab":[["父","ちち","chichi","（自己的）爸爸"],["銀行","ぎんこう","ginkou","銀行"],["働く","はたらく","hataraku","工作"]],"grammar":[["〜ています（狀態）","長期持續的狀態，如工作、居住。"]]},
+{"cat":"n5d","jp":"ご飯[はん]を食[た]べる前[まえ]に、手[て]を洗[あら]います。","kana":"ごはんをたべるまえに、てをあらいます。","romaji":"Gohan o taberu mae ni, te o araimasu.","zh":"吃飯前先洗手。","scene":"描述動作的先後。","vocab":[["ご飯","ごはん","gohan","飯"],["洗う","あらう","arau","洗"]],"grammar":[["辭書形＋前に","「做～之前」；前面永遠接辭書形。"]]},
+{"cat":"n5d","jp":"お風呂[ふろ]に入[はい]ったあとで、テレビを見[み]ます。","kana":"おふろにはいったあとで、テレビをみます。","romaji":"Ofuro ni haitta ato de, terebi o mimasu.","zh":"洗完澡之後看電視。","scene":"描述作息順序。","vocab":[["お風呂","おふろ","ofuro","浴缸、洗澡"],["入る","はいる","hairu","進入"]],"grammar":[["た形＋あとで","「做完～之後」；和「前に」成對記。"]]},
+{"cat":"n5d","jp":"漢字[かんじ]を書[か]くことができます。","kana":"かんじをかくことができます。","romaji":"Kanji o kaku koto ga dekimasu.","zh":"我會寫漢字。","scene":"說明會做的事。","vocab":[["漢字","かんじ","kanji","漢字"],["書く","かく","kaku","寫"]],"grammar":[["辭書形＋ことができる","「會～、能～」，能力的丁寧說法。"]]},
+{"cat":"n5d","jp":"疲[つか]れたから、早[はや]く寝[ね]ます。","kana":"つかれたから、はやくねます。","romaji":"Tsukareta kara, hayaku nemasu.","zh":"因為累了，要早點睡。","scene":"說明理由。","vocab":[["疲れる","つかれる","tsukareru","疲累"],["寝る","ねる","neru","睡覺"]],"grammar":[["普通形＋から","「因為～」，理由的直接說法。"],["い形容詞＋く＋動詞","早く寝る＝早點睡。"]]},
+{"cat":"n5e","jp":"すみません、もう一度[いちど]言[い]ってください。","kana":"すみません、もういちどいってください。","romaji":"Sumimasen, mou ichido itte kudasai.","zh":"不好意思，請再說一次。","scene":"沒聽清楚時的請求，學習者必備。","vocab":[["もう一度","もういちど","mou ichido","再一次"],["言う","いう","iu","說"]],"grammar":[["て形＋ください","「請～」。"]]},
+{"cat":"n5e","jp":"ここで写真[しゃしん]を撮[と]ってもいいですか。","kana":"ここでしゃしんをとってもいいですか。","romaji":"Koko de shashin o totte mo ii desu ka.","zh":"可以在這裡拍照嗎？","scene":"徵求許可。","vocab":[["写真","しゃしん","shashin","照片"],["撮る","とる","toru","拍（照）"]],"grammar":[["て形＋もいいですか","「可以～嗎」；答應時說「いいですよ」。"]]},
+{"cat":"n5e","jp":"教室[きょうしつ]で食[た]べ物[もの]を食[た]べてはいけません。","kana":"きょうしつでたべものをたべてはいけません。","romaji":"Kyoushitsu de tabemono o tabete wa ikemasen.","zh":"教室裡不可以吃東西。","scene":"說明禁止事項。","vocab":[["食べ物","たべもの","tabemono","食物"]],"grammar":[["て形＋はいけません","「不可以～」，表示禁止。"]]},
+{"cat":"n5e","jp":"窓[まど]を開[あ]けましょうか。","kana":"まどをあけましょうか。","romaji":"Mado o akemashou ka.","zh":"我來開窗好嗎？","scene":"主動提議幫忙。","vocab":[["窓","まど","mado","窗戶"],["開ける","あける","akeru","打開（他動詞）"]],"grammar":[["〜ましょうか","主動提議「我來～吧？」。"]]},
+{"cat":"n5e","jp":"電気[でんき]を消[け]さないでください。","kana":"でんきをけさないでください。","romaji":"Denki o kesanaide kudasai.","zh":"請不要關燈。","scene":"請對方不要做某事。","vocab":[["消す","けす","kesu","關（燈）、熄滅"]],"grammar":[["ない形＋でください","「請不要～」；消す→消さない→消さないで。"]]},
+{"cat":"n5f","jp":"新[あたら]しい靴[くつ]が欲[ほ]しいです。","kana":"あたらしいくつがほしいです。","romaji":"Atarashii kutsu ga hoshii desu.","zh":"想要新鞋子。","scene":"表達想要的東西。","vocab":[["新しい","あたらしい","atarashii","新的"],["靴","くつ","kutsu","鞋子"]],"grammar":[["名詞＋が欲しい","「想要（東西）」；想做動作則用「〜たい」。"]]},
+{"cat":"n5f","jp":"週末[しゅうまつ]、一緒[いっしょ]に映画[えいが]を見[み]ませんか。","kana":"しゅうまつ、いっしょにえいがをみませんか。","romaji":"Shuumatsu, issho ni eiga o mimasen ka.","zh":"週末要不要一起看電影？","scene":"邀約的固定句型。","vocab":[["週末","しゅうまつ","shuumatsu","週末"],["一緒に","いっしょに","issho ni","一起"]],"grammar":[["〜ませんか","「要不要～」的邀請；比「〜ましょう」留更多餘地。"]]},
+{"cat":"n5f","jp":"じゃ、駅[えき]の前[まえ]で会[あ]いましょう。","kana":"じゃ、えきのまえであいましょう。","romaji":"Ja, eki no mae de aimashou.","zh":"那我們就在車站前碰面吧。","scene":"敲定約定。","vocab":[["前","まえ","mae","前面"],["会う","あう","au","見面"]],"grammar":[["〜ましょう","「～吧」，一起做的提議或答應邀約。"]]},
+{"cat":"n5f","jp":"日本[にほん]へ行[い]ったことがありますか。","kana":"にほんへいったことがありますか。","romaji":"Nihon e itta koto ga arimasu ka.","zh":"你去過日本嗎？","scene":"詢問經驗。","vocab":[["日本","にほん","nihon","日本"],["行く","いく","iku","去"]],"grammar":[["た形＋ことがある","「曾經～過」，表示經驗。"]]},
+{"cat":"n5f","jp":"休[やす]みの日[ひ]は、掃除[そうじ]したり、買[か]い物[もの]したりします。","kana":"やすみのひは、そうじしたり、かいものしたりします。","romaji":"Yasumi no hi wa, souji shitari, kaimono shitari shimasu.","zh":"假日會打掃啦、買東西啦。","scene":"列舉代表性的活動。","vocab":[["休みの日","やすみのひ","yasumi no hi","休假日"],["掃除","そうじ","souji","打掃"]],"grammar":[["〜たり〜たりする","舉例列出幾件事，暗示還有其他。"]]},
+{"cat":"n5f","jp":"誕生日[たんじょうび]に友達[ともだち]からプレゼントをもらいました。","kana":"たんじょうびにともだちからプレゼントをもらいました。","romaji":"Tanjoubi ni tomodachi kara purezento o moraimashita.","zh":"生日時從朋友那裡收到了禮物。","scene":"聊收到的禮物。","vocab":[["誕生日","たんじょうび","tanjoubi","生日"],["もらう","もらう","morau","收到、得到"]],"grammar":[["もらう","「（從別人那裡）得到」；給的人用「から」或「に」。"]]},
+{"cat":"n5f","jp":"来年[らいねん]、日本語[にほんご]の試験[しけん]を受[う]けたいと思[おも]います。","kana":"らいねん、にほんごのしけんをうけたいとおもいます。","romaji":"Rainen, nihongo no shiken o uketai to omoimasu.","zh":"明年想報考日語檢定。","scene":"說出目標；考 N5 的你會用到。","vocab":[["来年","らいねん","rainen","明年"],["試験を受ける","しけんをうける","shiken o ukeru","參加考試"]],"grammar":[["〜たいと思います","「想～」的委婉說法。"]]},
+{"cat":"home","jp":"洗濯物[せんたくもの]を干[ほ]してから出[で]かけます。","kana":"せんたくものをほしてからでかけます。","romaji":"Sentakumono o hoshite kara dekakemasu.","zh":"曬完衣服再出門。","scene":"交代「先做完某件家事才出門」的順序，日常對話高頻。","vocab":[["洗濯物","せんたくもの","sentakumono","待洗或洗好的衣物"],["干す","ほす","hosu","曬、晾"],["出かける","でかける","dekakeru","出門"]],"grammar":[["〜てから","「做完A之後再B」，強調動作的先後順序。"]]},
+{"cat":"social","jp":"返信[へんしん]が遅[おそ]くなってすみません。","kana":"へんしんがおそくなってすみません。","romaji":"Henshin ga osoku natte sumimasen.","zh":"抱歉這麼晚才回覆。","scene":"訊息、郵件開頭的道歉，超高頻。","vocab":[["返信","へんしん","henshin","回覆、回信"]],"grammar":[["い形容詞＋くなる","「變得～」；遅くなる＝變晚了。"]]},
+{"cat":"social","jp":"今度[こんど]の週末[しゅうまつ]、都合[つごう]はどうですか。","kana":"こんどのしゅうまつ、つごうはどうですか。","romaji":"Kondo no shuumatsu, tsugou wa dou desu ka.","zh":"這個週末你方便嗎？","scene":"約時間的固定問法。","vocab":[["今度","こんど","kondo","這次、下次"],["都合","つごう","tsugou","（時間上的）方便"]],"grammar":[["都合はどうですか","詢問對方時間是否方便的慣用句。"]]},
+{"cat":"plan","jp":"予定[よてい]が変[か]わったら、教[おし]えてください。","kana":"よていがかわったら、おしえてください。","romaji":"Yotei ga kawattara, oshiete kudasai.","zh":"行程有變的話，請告訴我。","scene":"約定之後的收尾叮嚀。","vocab":[["変わる","かわる","kawaru","改變（自動詞）"],["教える","おしえる","oshieru","告訴、教"]],"grammar":[["〜たら","「如果～的話」。"],["自他動詞","変わる（自己變）vs 変える（把它改變），成對記。"]]},
+{"cat":"media","jp":"このドラマは原作[げんさく]のほうが面白[おもしろ]いと思[おも]う。","kana":"このドラマはげんさくのほうがおもしろいとおもう。","romaji":"Kono dorama wa gensaku no hou ga omoshiroi to omou.","zh":"這部劇我覺得原著比較好看。","scene":"聊影劇與原著小說的比較。","vocab":[["ドラマ","ドラマ","dorama","連續劇"],["原作","げんさく","gensaku","原著"]],"grammar":[["〜のほうが","比較句「～比較…」。"],["〜と思う","「我覺得～」。"]]}
+];
+
+/* ---------- 儲存（本機開啟時持久，受限環境自動退回記憶體） ---------- */
+var store=(function(){
+  try{
+    var k="__jpb_test";
+    localStorage.setItem(k,"1");localStorage.removeItem(k);
+    return localStorage;
+  }catch(e){
+    var m={};
+    return{
+      getItem:function(k){return Object.prototype.hasOwnProperty.call(m,k)?m[k]:null;},
+      setItem:function(k,v){m[k]=String(v);},
+      removeItem:function(k){delete m[k];}
+    };
+  }
+})();
+function loadJSON(k,d){try{var s=store.getItem(k);return s?JSON.parse(s):d;}catch(e){return d;}}
+var settings=loadJSON("jpb_settings",{rate:0.9});
+if(!settings.v3){settings.rate=0.9;settings.v3=1;saveSettings2();}
+function saveSettings2(){try{store.setItem("jpb_settings",JSON.stringify(settings));}catch(e){}}
+function saveSettings(){store.setItem("jpb_settings",JSON.stringify(settings));}
+
+var view=document.getElementById("view");
+
+/* ---------- 工具 ---------- */
+function rubyJP(jp){return jp.replace(/([\u4E00-\u9FFF\u3005]+)\[([^\]]*)\]/g,"<ruby>$1<rt>$2</rt></ruby>");}
+function plainJP(jp){return jp.replace(/\[[^\]]*\]/g,"");}
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+var toastTimer=null;
+function toast(msg){
+  var t=document.getElementById("toast");
+  t.textContent=msg;t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){t.classList.remove("show");},1800);
+}
+
+/* ---------- 語音 ---------- */
+var jaVoices=[];
+function refreshVoices(){
+  if(!window.speechSynthesis){updateVoiceNote();return;}
+  try{
+    jaVoices=speechSynthesis.getVoices().filter(function(v){
+      return v.lang&&v.lang.toLowerCase().replace("_","-").indexOf("ja")===0;
+    });
+  }catch(e){jaVoices=[];}
+  updateVoiceNote();
+}
+function updateVoiceNote(){
+  var el=document.getElementById("voiceNote");
+  if(!el)return;
+  if(!window.speechSynthesis){el.textContent="此瀏覽器不支援語音合成";return;}
+  el.textContent=jaVoices.length?jaVoices[0].name+"（共 "+jaVoices.length+" 個）":"未偵測到日文語音，安裝後請重新整理";
+}
+function speak(text,slow){
+  if(!window.speechSynthesis){toast("此瀏覽器不支援語音");return;}
+  if(!jaVoices.length)refreshVoices();
+  var u=new SpeechSynthesisUtterance(text);
+  u.lang="ja-JP";
+  if(jaVoices.length)u.voice=jaVoices[0];
+  u.rate=slow?Math.max(0.45,settings.rate*0.6):settings.rate;
+  try{speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}
+}
+
+/* ---------- 分頁 ---------- */
+var curTab="learn";
+function switchTab(t){
+  curTab=t;
+  var bs=document.querySelectorAll(".tab");
+  for(var i=0;i<bs.length;i++)bs[i].classList.toggle("on",bs[i].getAttribute("data-tab")===t);
+  if(t==="learn")renderLearn();
+  else if(t==="kanji")renderKanji();
+  else if(t==="glearn")renderGLearn();
+  else if(t==="gsent")renderGSent();
+  else if(t==="vbook")renderVBook();
+  else if(t==="vocab")renderVocab();
+  else if(t==="kquiz")renderKQuiz();
+  else if(t==="listen")renderListen();
+  else if(t==="reading")renderReading();
+  else if(t==="grammar")renderGrammar();
+  else renderKana();
+  window.scrollTo(0,0);
+}
+
+/* ---------- 例句學習 ---------- */
+var cur=0;
+function renderLearn(){
+  if(cur<0)cur=0;
+  if(cur>=DATA.length)cur=DATA.length-1;
+  var it=DATA[cur];
+  var vrows="";
+  for(var v=0;v<it.vocab.length;v++){
+    var w=it.vocab[v];
+    vrows+="<tr><td class='w'>"+w[0]+"</td><td class='k'>"+w[1]+"</td><td class='r'>"+w[2]+"</td><td>"+w[3]+"</td></tr>";
+  }
+  var grows="";
+  for(var g=0;g<it.grammar.length;g++){
+    grows+="<p class='gp'><b>"+it.grammar[g][0]+"</b>"+it.grammar[g][1]+"</p>";
+  }
+  view.innerHTML="<div class='card'>"+
+    "<div class='tools'>"+
+      "<button class='btn primary' id='playBtn'>▶ 朗讀</button>"+
+      "<button class='btn' id='slowBtn'>慢速</button>"+
+      "<span class='sp'></span>"+
+      "<button class='btn' id='randBtn'>隨機</button>"+
+    "</div>"+
+    "<p class='jp'>"+rubyJP(it.jp)+"</p>"+
+    "<p class='romaji'>"+it.romaji+"</p>"+
+    "<p class='zh'>"+it.zh+"</p>"+
+    "<p class='sec-t'>使用情境</p><div class='scene'>"+it.scene+"</div>"+
+    "<p class='sec-t'>核心單字</p>"+
+    "<table class='vocab'><thead><tr><th>單字</th><th>讀音</th><th>羅馬拼音</th><th>意思</th></tr></thead><tbody>"+vrows+"</tbody></table>"+
+    "<p class='sec-t'>文法拆解</p>"+grows+
+    "<div class='navr'>"+
+      "<button class='btn' id='prevBtn'>‹ 上一句</button>"+
+      "<span class='pos'>第 "+(cur+1)+"／"+DATA.length+" 句</span>"+
+      "<button class='btn' id='nextBtn'>下一句 ›</button>"+
+    "</div>"+
+  "</div>";
+  document.getElementById("playBtn").onclick=function(){speak(it.kana,false);};
+  document.getElementById("slowBtn").onclick=function(){speak(it.kana,true);};
+  document.getElementById("randBtn").onclick=function(){var r;do{r=Math.floor(Math.random()*DATA.length);}while(r===cur&&DATA.length>1);cur=r;renderLearn();};
+  document.getElementById("prevBtn").onclick=function(){cur=(cur-1+DATA.length)%DATA.length;renderLearn();};
+  document.getElementById("nextBtn").onclick=function(){cur=(cur+1)%DATA.length;renderLearn();};
+}
+
+/* ---------- 單字測驗 ---------- */
+var VOCAB=[
+["ああ", "ああ", "aa", "啊、哦（感嘆）"],
+["会う", "あう", "au", "見面"],
+["青", "あお", "ao", "藍色"],
+["青い", "あおい", "aoi", "藍色的"],
+["赤", "あか", "aka", "紅色"],
+["赤い", "あかい", "akai", "紅色的"],
+["明るい", "あかるい", "akarui", "明亮的、開朗的"],
+["秋", "あき", "aki", "秋天"],
+["開く", "あく", "aku", "（門窗）開"],
+["開ける", "あける", "akeru", "打開（他動詞）"],
+["上げる", "あげる", "ageru", "舉起、給"],
+["朝", "あさ", "asa", "早上"],
+["朝御飯", "あさごはん", "asagohan", "早餐"],
+["明後日", "あさって", "asatte", "後天"],
+["足", "あし", "ashi", "腳、腿"],
+["明日", "あした", "ashita", "明天"],
+["あそこ", "あそこ", "asoko", "那裡（遠）"],
+["遊ぶ", "あそぶ", "asobu", "玩"],
+["暖かい", "あたたかい", "atatakai", "溫暖的"],
+["頭", "あたま", "atama", "頭"],
+["新しい", "あたらしい", "atarashii", "新的"],
+["あちら", "あちら", "achira", "那邊（禮貌）"],
+["暑い", "あつい", "atsui", "（天氣）熱的"],
+["熱い", "あつい", "atsui", "（東西）燙的"],
+["厚い", "あつい", "atsui", "厚的"],
+["あっち", "あっち", "atchi", "那邊（口語）"],
+["後", "あと", "ato", "之後、後面"],
+["あなた", "あなた", "anata", "你"],
+["兄", "あに", "ani", "（自己的）哥哥"],
+["姉", "あね", "ane", "（自己的）姊姊"],
+["アパート", "アパート", "apaato", "公寓"],
+["あの", "あの", "ano", "那個（遠）"],
+["浴びる", "あびる", "abiru", "淋、沖（澡）"],
+["危ない", "あぶない", "abunai", "危險的"],
+["甘い", "あまい", "amai", "甜的"],
+["余り", "あまり", "amari", "（＋否定）不太"],
+["雨", "あめ", "ame", "雨"],
+["飴", "あめ", "ame", "糖果"],
+["洗う", "あらう", "arau", "洗"],
+["在る", "ある", "aru", "在（無生命）"],
+["有る", "ある", "aru", "有（無生命）"],
+["歩く", "あるく", "aruku", "走路"],
+["あれ", "あれ", "are", "那個（遠）"],
+["いい", "いい", "ii", "好的"],
+["いいえ", "いいえ", "iie", "不、不是"],
+["言う", "いう", "iu", "說"],
+["家", "いえ", "ie", "家、房子"],
+["いかが", "いかが", "ikaga", "如何（禮貌）"],
+["行く", "いく", "iku", "去"],
+["いくつ", "いくつ", "ikutsu", "幾個、幾歲"],
+["いくら", "いくら", "ikura", "多少錢"],
+["池", "いけ", "ike", "池塘"],
+["医者", "いしゃ", "isha", "醫生"],
+["椅子", "いす", "isu", "椅子"],
+["忙しい", "いそがしい", "isogashii", "忙碌的"],
+["痛い", "いたい", "itai", "痛的"],
+["一", "いち", "ichi", "一"],
+["一日", "いちにち", "ichinichi", "一天、一號"],
+["一番", "いちばん", "ichiban", "最、第一"],
+["いつ", "いつ", "itsu", "什麼時候"],
+["五日", "いつか", "itsuka", "五號、五天"],
+["一緒", "いっしょ", "issho", "一起"],
+["五つ", "いつつ", "itsutsu", "五個"],
+["いつも", "いつも", "itsumo", "總是"],
+["犬", "いぬ", "inu", "狗"],
+["今", "いま", "ima", "現在"],
+["意味", "いみ", "imi", "意思"],
+["妹", "いもうと", "imouto", "（自己的）妹妹"],
+["嫌", "いや", "iya", "討厭、不願意"],
+["入口", "いりぐち", "iriguchi", "入口"],
+["居る", "いる", "iru", "在（有生命）"],
+["要る", "いる", "iru", "需要"],
+["入れる", "いれる", "ireru", "放入"],
+["色", "いろ", "iro", "顏色"],
+["色々", "いろいろ", "iroiro", "各式各樣"],
+["上", "うえ", "ue", "上面"],
+["後ろ", "うしろ", "ushiro", "後面"],
+["薄い", "うすい", "usui", "薄的、淡的"],
+["歌", "うた", "uta", "歌"],
+["歌う", "うたう", "utau", "唱歌"],
+["うち", "うち", "uchi", "家、我家"],
+["生まれる", "うまれる", "umareru", "出生"],
+["海", "うみ", "umi", "海"],
+["売る", "うる", "uru", "賣"],
+["うるさい", "うるさい", "urusai", "吵鬧的"],
+["上着", "うわぎ", "uwagi", "外套、上衣"],
+["絵", "え", "e", "圖畫"],
+["映画", "えいが", "eiga", "電影"],
+["映画館", "えいがかん", "eigakan", "電影院"],
+["英語", "えいご", "eigo", "英語"],
+["ええ", "ええ", "ee", "是、嗯"],
+["駅", "えき", "eki", "車站"],
+["エレベーター", "エレベーター", "erebeetaa", "電梯"],
+["～円", "えん", "en", "～日圓"],
+["鉛筆", "えんぴつ", "enpitsu", "鉛筆"],
+["お～", "お", "o", "御～（美化語接頭）"],
+["美味しい", "おいしい", "oishii", "好吃的"],
+["多い", "おおい", "ooi", "多的"],
+["大きい", "おおきい", "ookii", "大的"],
+["大きな", "おおきな", "ookina", "大的（連體詞）"],
+["大勢", "おおぜい", "oozei", "很多人"],
+["お母さん", "おかあさん", "okaasan", "媽媽（稱呼）"],
+["お菓子", "おかし", "okashi", "點心、零食"],
+["お金", "おかね", "okane", "錢"],
+["起きる", "おきる", "okiru", "起床"],
+["置く", "おく", "oku", "放置"],
+["奥さん", "おくさん", "okusan", "（別人的）太太"],
+["お酒", "おさけ", "osake", "酒"],
+["お皿", "おさら", "osara", "盤子"],
+["伯父", "おじさん", "ojisan", "伯伯、叔叔"],
+["おじいさん", "おじいさん", "ojiisan", "爺爺、老爺爺"],
+["教える", "おしえる", "oshieru", "告訴、教"],
+["押す", "おす", "osu", "推、按"],
+["遅い", "おそい", "osoi", "慢的、晚的"],
+["お茶", "おちゃ", "ocha", "茶"],
+["お手洗い", "おてあらい", "otearai", "洗手間"],
+["お父さん", "おとうさん", "otousan", "爸爸（稱呼）"],
+["弟", "おとうと", "otouto", "（自己的）弟弟"],
+["男", "おとこ", "otoko", "男人"],
+["男の子", "おとこのこ", "otokonoko", "男孩"],
+["一昨日", "おととい", "ototoi", "前天"],
+["おととし", "おととし", "ototoshi", "前年"],
+["大人", "おとな", "otona", "大人"],
+["お腹", "おなか", "onaka", "肚子"],
+["同じ", "おなじ", "onaji", "相同"],
+["お兄さん", "おにいさん", "oniisan", "（別人的）哥哥"],
+["お姉さん", "おねえさん", "oneesan", "（別人的）姊姊"],
+["伯母さん", "おばさん", "obasan", "伯母、阿姨"],
+["おばあさん", "おばあさん", "obaasan", "奶奶、老奶奶"],
+["お風呂", "おふろ", "ofuro", "浴缸、洗澡"],
+["お弁当", "おべんとう", "obentou", "便當"],
+["覚える", "おぼえる", "oboeru", "記住"],
+["おまわりさん", "おまわりさん", "omawarisan", "警察（親切稱呼）"],
+["重い", "おもい", "omoi", "重的、沉重的"],
+["面白い", "おもしろい", "omoshiroi", "有趣的"],
+["泳ぐ", "およぐ", "oyogu", "游泳"],
+["降りる", "おりる", "oriru", "下（車）"],
+["終る", "おわる", "owaru", "結束"],
+["音楽", "おんがく", "ongaku", "音樂"],
+["女", "おんな", "onna", "女人"],
+["女の子", "おんなのこ", "onnanoko", "女孩"],
+["～回", "かい", "kai", "～次"],
+["～階", "かい", "kai", "～樓"],
+["外国", "がいこく", "gaikoku", "外國"],
+["外国人", "がいこくじん", "gaikokujin", "外國人"],
+["会社", "かいしゃ", "kaisha", "公司"],
+["階段", "かいだん", "kaidan", "樓梯"],
+["買い物", "かいもの", "kaimono", "購物、買菜"],
+["買う", "かう", "kau", "買"],
+["返す", "かえす", "kaesu", "歸還"],
+["帰る", "かえる", "kaeru", "回去、回家"],
+["顔", "かお", "kao", "臉"],
+["かかる", "かかる", "kakaru", "花費（時間、錢）"],
+["鍵", "かぎ", "kagi", "鑰匙、鎖"],
+["書く", "かく", "kaku", "寫"],
+["学生", "がくせい", "gakusei", "學生"],
+["～か月", "かげつ", "kagetsu", "～個月"],
+["掛ける", "かける", "kakeru", "掛上、戴（眼鏡）"],
+["かける", "かける", "kakeru", "打（電話）"],
+["傘", "かさ", "kasa", "傘"],
+["貸す", "かす", "kasu", "借出"],
+["風", "かぜ", "kaze", "風"],
+["風邪", "かぜ", "kaze", "感冒"],
+["方", "かた", "kata", "位（人的敬稱）"],
+["家族", "かぞく", "kazoku", "家人"],
+["片仮名", "かたかな", "katakana", "片假名"],
+["～月", "がつ", "gatsu", "～月"],
+["学校", "がっこう", "gakkou", "學校"],
+["カップ", "カップ", "kappu", "（有把的）杯子"],
+["家庭", "かてい", "katei", "家庭"],
+["角", "かど", "kado", "轉角"],
+["かばん", "かばん", "kaban", "包包"],
+["花瓶", "かびん", "kabin", "花瓶"],
+["かぶる", "かぶる", "kaburu", "戴（帽子）"],
+["紙", "かみ", "kami", "紙"],
+["カメラ", "カメラ", "kamera", "相機"],
+["火曜日", "かようび", "kayoubi", "星期二"],
+["辛い", "からい", "karai", "辣的、鹹的"],
+["体", "からだ", "karada", "身體"],
+["借りる", "かりる", "kariru", "借入"],
+["～がる", "がる", "garu", "覺得～（第三人稱感受）"],
+["軽い", "かるい", "karui", "輕的"],
+["カレー", "カレー", "karee", "咖哩"],
+["カレンダー", "カレンダー", "karendaa", "月曆"],
+["川", "かわ", "kawa", "河川"],
+["～側", "がわ", "gawa", "～側、～邊"],
+["可愛い", "かわいい", "kawaii", "可愛的"],
+["漢字", "かんじ", "kanji", "漢字"],
+["木", "き", "ki", "樹、木頭"],
+["黄色", "きいろ", "kiiro", "黃色"],
+["黄色い", "きいろい", "kiiroi", "黃色的"],
+["消える", "きえる", "kieru", "消失、熄滅"],
+["聞く", "きく", "kiku", "聽、問"],
+["北", "きた", "kita", "北"],
+["ギター", "ギター", "gitaa", "吉他"],
+["汚い", "きたない", "kitanai", "髒的"],
+["喫茶店", "きっさてん", "kissaten", "咖啡廳"],
+["切手", "きって", "kitte", "郵票"],
+["切符", "きっぷ", "kippu", "車票"],
+["昨日", "きのう", "kinou", "昨天"],
+["九", "きゅう", "kyuu", "九"],
+["牛肉", "ぎゅうにく", "gyuuniku", "牛肉"],
+["牛乳", "ぎゅうにゅう", "gyuunyuu", "牛奶"],
+["今日", "きょう", "kyou", "今天"],
+["教室", "きょうしつ", "kyoushitsu", "教室"],
+["兄弟", "きょうだい", "kyoudai", "兄弟姊妹"],
+["去年", "きょねん", "kyonen", "去年"],
+["嫌い", "きらい", "kirai", "討厭"],
+["切る", "きる", "kiru", "切、剪"],
+["着る", "きる", "kiru", "穿（上身）"],
+["綺麗", "きれい", "kirei", "漂亮、乾淨"],
+["キログラム", "キログラム", "kiroguramu", "公斤"],
+["キロメートル", "キロメートル", "kiromeetoru", "公里"],
+["銀行", "ぎんこう", "ginkou", "銀行"],
+["金曜日", "きんようび", "kinyoubi", "星期五"],
+["薬", "くすり", "kusuri", "藥"],
+["下さい", "ください", "kudasai", "請給我"],
+["果物", "くだもの", "kudamono", "水果"],
+["口", "くち", "kuchi", "嘴巴"],
+["靴", "くつ", "kutsu", "鞋子"],
+["靴下", "くつした", "kutsushita", "襪子"],
+["国", "くに", "kuni", "國家、家鄉"],
+["曇り", "くもり", "kumori", "陰天"],
+["曇る", "くもる", "kumoru", "轉陰"],
+["暗い", "くらい", "kurai", "暗的"],
+["～くらい", "くらい", "kurai", "大約～"],
+["クラス", "クラス", "kurasu", "班級"],
+["グラム", "グラム", "guramu", "公克"],
+["来る", "くる", "kuru", "來"],
+["車", "くるま", "kuruma", "車子"],
+["黒", "くろ", "kuro", "黑色"],
+["黒い", "くろい", "kuroi", "黑色的"],
+["警官", "けいかん", "keikan", "警察"],
+["今朝", "けさ", "kesa", "今天早上"],
+["消す", "けす", "kesu", "關（燈）、熄滅"],
+["結構", "けっこう", "kekkou", "相當；（婉拒）不用了"],
+["結婚", "けっこん", "kekkon", "結婚"],
+["月曜日", "げつようび", "getsuyoubi", "星期一"],
+["玄関", "げんかん", "genkan", "玄關"],
+["元気", "げんき", "genki", "有精神、健康"],
+["～個", "こ", "ko", "～個"],
+["五", "ご", "go", "五"],
+["～語", "ご", "go", "～語"],
+["公園", "こうえん", "kouen", "公園"],
+["交差点", "こうさてん", "kousaten", "十字路口"],
+["紅茶", "こうちゃ", "koucha", "紅茶"],
+["交番", "こうばん", "kouban", "派出所"],
+["声", "こえ", "koe", "（人的）聲音"],
+["コート", "コート", "kooto", "大衣"],
+["コーヒー", "コーヒー", "koohii", "咖啡"],
+["ここ", "ここ", "koko", "這裡"],
+["午後", "ごご", "gogo", "下午"],
+["九日", "ここのか", "kokonoka", "九號、九天"],
+["九つ", "ここのつ", "kokonotsu", "九個"],
+["午前", "ごぜん", "gozen", "上午"],
+["答える", "こたえる", "kotaeru", "回答"],
+["こちら", "こちら", "kochira", "這邊（禮貌）"],
+["こっち", "こっち", "kotchi", "這邊（口語）"],
+["コップ", "コップ", "koppu", "玻璃杯"],
+["今年", "ことし", "kotoshi", "今年"],
+["言葉", "ことば", "kotoba", "詞語、語言"],
+["子供", "こども", "kodomo", "小孩"],
+["この", "この", "kono", "這個（＋名詞）"],
+["御飯", "ごはん", "gohan", "飯、餐"],
+["コピーする", "コピーする", "kopiisuru", "影印"],
+["困る", "こまる", "komaru", "困擾、為難"],
+["これ", "これ", "kore", "這個"],
+["～ころ", "ころ", "koro", "～左右（時間點）"],
+["今月", "こんげつ", "kongetsu", "這個月"],
+["今週", "こんしゅう", "konshuu", "這星期"],
+["こんな", "こんな", "konna", "這樣的"],
+["今晩", "こんばん", "konban", "今晚"],
+["さあ", "さあ", "saa", "來吧、這個嘛"],
+["～歳", "さい", "sai", "～歲"],
+["財布", "さいふ", "saifu", "錢包"],
+["魚", "さかな", "sakana", "魚"],
+["先", "さき", "saki", "前方、先"],
+["咲く", "さく", "saku", "開（花）"],
+["作文", "さくぶん", "sakubun", "作文"],
+["差す", "さす", "sasu", "撐（傘）"],
+["～冊", "さつ", "satsu", "～本（書）"],
+["雑誌", "ざっし", "zasshi", "雜誌"],
+["砂糖", "さとう", "satou", "糖"],
+["寒い", "さむい", "samui", "冷的"],
+["さ来年", "さらいねん", "sarainen", "後年"],
+["～さん", "さん", "san", "～先生、～小姐"],
+["三", "さん", "san", "三"],
+["散歩", "さんぽ", "sanpo", "散步"],
+["四", "し", "shi", "四"],
+["～時", "じ", "ji", "～點（鐘）"],
+["塩", "しお", "shio", "鹽"],
+["しかし", "しかし", "shikashi", "但是"],
+["時間", "じかん", "jikan", "時間"],
+["～時間", "じかん", "jikan", "～小時"],
+["仕事", "しごと", "shigoto", "工作"],
+["辞書", "じしょ", "jisho", "辭典"],
+["静か", "しずか", "shizuka", "安靜"],
+["下", "した", "shita", "下面"],
+["七", "しち", "shichi", "七"],
+["質問", "しつもん", "shitsumon", "問題、提問"],
+["自転車", "じてんしゃ", "jitensha", "腳踏車"],
+["自動車", "じどうしゃ", "jidousha", "汽車"],
+["死ぬ", "しぬ", "shinu", "死"],
+["字引", "じびき", "jibiki", "字典"],
+["自分", "じぶん", "jibun", "自己"],
+["閉まる", "しまる", "shimaru", "（門窗）關上"],
+["閉める", "しめる", "shimeru", "關（門窗）"],
+["締める", "しめる", "shimeru", "繫（領帶等）"],
+["じゃ", "じゃ", "ja", "那麼"],
+["写真", "しゃしん", "shashin", "照片"],
+["シャツ", "シャツ", "shatsu", "襯衫"],
+["シャワー", "シャワー", "shawaa", "淋浴"],
+["十", "じゅう", "juu", "十"],
+["～中", "じゅう", "juu", "整～、～之中"],
+["～週間", "しゅうかん", "shuukan", "～個星期"],
+["授業", "じゅぎょう", "jugyou", "課、上課"],
+["宿題", "しゅくだい", "shukudai", "作業"],
+["上手", "じょうず", "jouzu", "擅長"],
+["丈夫", "じょうぶ", "joubu", "堅固、結實"],
+["醤油", "しょうゆ", "shouyu", "醬油"],
+["食堂", "しょくどう", "shokudou", "食堂、餐廳"],
+["知る", "しる", "shiru", "知道"],
+["白", "しろ", "shiro", "白色"],
+["白い", "しろい", "shiroi", "白色的"],
+["～人", "じん", "jin", "～人（國籍等）"],
+["新聞", "しんぶん", "shinbun", "報紙"],
+["水曜日", "すいようび", "suiyoubi", "星期三"],
+["吸う", "すう", "suu", "吸（菸）"],
+["スカート", "スカート", "sukaato", "裙子"],
+["好き", "すき", "suki", "喜歡"],
+["～すぎ", "すぎ", "sugi", "超過～、～過頭"],
+["少ない", "すくない", "sukunai", "少的"],
+["すぐに", "すぐに", "suguni", "馬上"],
+["少し", "すこし", "sukoshi", "一點點"],
+["涼しい", "すずしい", "suzushii", "涼爽的"],
+["～ずつ", "ずつ", "zutsu", "各～、每次～"],
+["ストーブ", "ストーブ", "sutoobu", "暖爐"],
+["スプーン", "スプーン", "supuun", "湯匙"],
+["スポーツ", "スポーツ", "supootsu", "運動"],
+["ズボン", "ズボン", "zubon", "褲子"],
+["住む", "すむ", "sumu", "居住"],
+["する", "する", "suru", "做"],
+["座る", "すわる", "suwaru", "坐"],
+["背", "せい", "sei", "身高、背"],
+["生徒", "せいと", "seito", "學生（中小學）"],
+["セーター", "セーター", "seetaa", "毛衣"],
+["石鹸", "せっけん", "sekken", "肥皂"],
+["背広", "せびろ", "sebiro", "西裝"],
+["狭い", "せまい", "semai", "狹窄的"],
+["ゼロ", "ゼロ", "zero", "零"],
+["千", "せん", "sen", "千"],
+["先月", "せんげつ", "sengetsu", "上個月"],
+["先週", "せんしゅう", "senshuu", "上星期"],
+["先生", "せんせい", "sensei", "老師"],
+["洗濯", "せんたく", "sentaku", "洗衣服"],
+["全部", "ぜんぶ", "zenbu", "全部"],
+["そう", "そう", "sou", "是的、是那樣"],
+["掃除", "そうじ", "souji", "打掃"],
+["そうして", "そうして", "soushite", "然後、而且"],
+["そこ", "そこ", "soko", "那裡"],
+["そちら", "そちら", "sochira", "那邊（禮貌）"],
+["そっち", "そっち", "sotchi", "那邊（口語）"],
+["外", "そと", "soto", "外面"],
+["その", "その", "sono", "那個（＋名詞）"],
+["そば", "そば", "soba", "旁邊"],
+["空", "そら", "sora", "天空"],
+["それ", "それ", "sore", "那個"],
+["それから", "それから", "sorekara", "然後"],
+["それでは", "それでは", "soredeha", "那麼"],
+["～台", "だい", "dai", "～台（機器、車）"],
+["大学", "だいがく", "daigaku", "大學"],
+["大使館", "たいしかん", "taishikan", "大使館"],
+["大丈夫", "だいじょうぶ", "daijoubu", "沒問題、不要緊"],
+["大好き", "だいすき", "daisuki", "最喜歡"],
+["大切", "たいせつ", "taisetsu", "重要"],
+["台所", "だいどころ", "daidokoro", "廚房"],
+["大変", "たいへん", "taihen", "非常；辛苦"],
+["高い", "たかい", "takai", "高的、貴的"],
+["～だけ", "だけ", "dake", "只有～"],
+["沢山", "たくさん", "takusan", "很多"],
+["タクシー", "タクシー", "takushii", "計程車"],
+["出す", "だす", "dasu", "拿出去、倒（垃圾）"],
+["～たち", "たち", "tachi", "～們"],
+["立つ", "たつ", "tatsu", "站立"],
+["たて", "たて", "tate", "縱、豎"],
+["建物", "たてもの", "tatemono", "建築物"],
+["楽しい", "たのしい", "tanoshii", "開心的"],
+["頼む", "たのむ", "tanomu", "拜託、點（餐）"],
+["たばこ", "たばこ", "tabako", "香菸"],
+["多分", "たぶん", "tabun", "大概"],
+["食べ物", "たべもの", "tabemono", "食物"],
+["食べる", "たべる", "taberu", "吃"],
+["卵", "たまご", "tamago", "蛋"],
+["誰", "だれ", "dare", "誰"],
+["誰か", "だれか", "dareka", "某人、有人"],
+["誕生日", "たんじょうび", "tanjoubi", "生日"],
+["段々", "だんだん", "dandan", "漸漸"],
+["小さい", "ちいさい", "chiisai", "小的"],
+["小さな", "ちいさな", "chiisana", "小的（連體詞）"],
+["近い", "ちかい", "chikai", "近的"],
+["違う", "ちがう", "chigau", "不同、不對"],
+["近く", "ちかく", "chikaku", "附近"],
+["地下鉄", "ちかてつ", "chikatetsu", "地下鐵"],
+["地図", "ちず", "chizu", "地圖"],
+["父", "ちち", "chichi", "（自己的）爸爸"],
+["茶色", "ちゃいろ", "chairo", "咖啡色"],
+["茶碗", "ちゃわん", "chawan", "飯碗"],
+["丁度", "ちょうど", "choudo", "正好"],
+["ちょっと", "ちょっと", "chotto", "稍微、一下"],
+["使う", "つかう", "tsukau", "使用"],
+["疲れる", "つかれる", "tsukareru", "疲累"],
+["次", "つぎ", "tsugi", "下一個"],
+["着く", "つく", "tsuku", "到達"],
+["机", "つくえ", "tsukue", "書桌"],
+["作る", "つくる", "tsukuru", "做、製作"],
+["つける", "つける", "tsukeru", "記錄"],
+["勤める", "つとめる", "tsutomeru", "任職（於）"],
+["つまらない", "つまらない", "tsumaranai", "無聊的"],
+["冷たい", "つめたい", "tsumetai", "（東西）冰冷的"],
+["強い", "つよい", "tsuyoi", "強的"],
+["手", "て", "te", "手"],
+["テープ", "テープ", "teepu", "膠帶、錄音帶"],
+["テープレコーダー", "テープレコーダー", "teepurekoodaa", "錄音機"],
+["テーブル", "テーブル", "teeburu", "桌子"],
+["出かける", "でかける", "dekakeru", "出門"],
+["手紙", "てがみ", "tegami", "信"],
+["できる", "できる", "dekiru", "會、能夠"],
+["出口", "でぐち", "deguchi", "出口"],
+["テスト", "テスト", "tesuto", "考試"],
+["では", "では", "deha", "那麼"],
+["デパート", "デパート", "depaato", "百貨公司"],
+["でも", "でも", "demo", "但是"],
+["出る", "でる", "deru", "出去、出現"],
+["テレビ", "テレビ", "terebi", "電視"],
+["天気", "てんき", "tenki", "天氣"],
+["電気", "でんき", "denki", "電、電燈"],
+["電車", "でんしゃ", "densha", "電車"],
+["電話", "でんわ", "denwa", "電話"],
+["戸", "と", "to", "（日式）門"],
+["～度", "ど", "do", "～次、～度"],
+["ドア", "ドア", "doa", "（西式）門"],
+["トイレ", "トイレ", "toire", "廁所"],
+["どう", "どう", "dou", "怎麼樣"],
+["どうして", "どうして", "doushite", "為什麼"],
+["どうぞ", "どうぞ", "douzo", "請"],
+["動物", "どうぶつ", "doubutsu", "動物"],
+["どうも", "どうも", "doumo", "謝謝；總覺得"],
+["遠い", "とおい", "tooi", "遠的"],
+["十日", "とおか", "tooka", "十號、十天"],
+["時々", "ときどき", "tokidoki", "有時"],
+["時計", "とけい", "tokei", "時鐘、手錶"],
+["どこ", "どこ", "doko", "哪裡"],
+["所", "ところ", "tokoro", "地方"],
+["年", "とし", "toshi", "年、年紀"],
+["図書館", "としょかん", "toshokan", "圖書館"],
+["どちら", "どちら", "dochira", "哪邊（禮貌）"],
+["どっち", "どっち", "dotchi", "哪邊（口語）"],
+["とても", "とても", "totemo", "非常"],
+["どなた", "どなた", "donata", "哪位"],
+["隣", "となり", "tonari", "隔壁"],
+["どの", "どの", "dono", "哪個（＋名詞）"],
+["飛ぶ", "とぶ", "tobu", "飛"],
+["止まる", "とまる", "tomaru", "停止"],
+["友達", "ともだち", "tomodachi", "朋友"],
+["土曜日", "どようび", "doyoubi", "星期六"],
+["鳥", "とり", "tori", "鳥"],
+["鶏肉", "とりにく", "toriniku", "雞肉"],
+["取る", "とる", "toru", "拿、取"],
+["撮る", "とる", "toru", "拍（照）"],
+["どれ", "どれ", "dore", "哪個"],
+["どんな", "どんな", "donna", "什麼樣的"],
+["ない", "ない", "nai", "沒有"],
+["ナイフ", "ナイフ", "naifu", "刀子"],
+["中", "なか", "naka", "裡面"],
+["長い", "ながい", "nagai", "長的"],
+["鳴く", "なく", "naku", "（動物）叫"],
+["無くす", "なくす", "nakusu", "弄丟"],
+["なぜ", "なぜ", "naze", "為什麼"],
+["夏", "なつ", "natsu", "夏天"],
+["夏休み", "なつやすみ", "natsuyasumi", "暑假"],
+["～など", "など", "nado", "～等等"],
+["七つ", "ななつ", "nanatsu", "七個"],
+["何", "なん", "nan", "什麼"],
+["七日", "なのか", "nanoka", "七號、七天"],
+["名前", "なまえ", "namae", "名字"],
+["習う", "ならう", "narau", "學習"],
+["並ぶ", "ならぶ", "narabu", "排隊、排列"],
+["並べる", "ならべる", "naraberu", "排列（他動詞）"],
+["なる", "なる", "naru", "變成"],
+["何～", "なん", "nan", "幾～、什麼～"],
+["二", "に", "ni", "二"],
+["にぎやか", "にぎやか", "nigiyaka", "熱鬧"],
+["肉", "にく", "niku", "肉"],
+["西", "にし", "nishi", "西"],
+["～日", "にち", "nichi", "～號、～天"],
+["日曜日", "にちようび", "nichiyoubi", "星期天"],
+["荷物", "にもつ", "nimotsu", "行李"],
+["ニュース", "ニュース", "nyuusu", "新聞"],
+["庭", "にわ", "niwa", "院子"],
+["脱ぐ", "ぬぐ", "nugu", "脫（衣、鞋）"],
+["温い", "ぬるい", "nurui", "溫的、不夠燙"],
+["ネクタイ", "ネクタイ", "nekutai", "領帶"],
+["猫", "ねこ", "neko", "貓"],
+["寝る", "ねる", "neru", "睡覺"],
+["～年", "ねん", "nen", "～年"],
+["ノート", "ノート", "nooto", "筆記本"],
+["登る", "のぼる", "noboru", "爬、登"],
+["飲み物", "のみもの", "nomimono", "飲料"],
+["飲む", "のむ", "nomu", "喝"],
+["乗る", "のる", "noru", "搭乘"],
+["歯", "は", "ha", "牙齒"],
+["パーティー", "パーティー", "paateii", "派對"],
+["はい", "はい", "hai", "是、好"],
+["～杯", "はい", "hai", "～杯"],
+["灰皿", "はいざら", "haizara", "菸灰缸"],
+["入る", "はいる", "hairu", "進入"],
+["葉書", "はがき", "hagaki", "明信片"],
+["はく", "はく", "haku", "穿（下身、鞋）"],
+["箱", "はこ", "hako", "箱子、盒子"],
+["橋", "はし", "hashi", "橋"],
+["箸", "はし", "hashi", "筷子"],
+["始まる", "はじまる", "hajimaru", "開始（自動詞）"],
+["初め", "はじめ", "hajime", "開始、起初"],
+["初めて", "はじめて", "hajimete", "第一次"],
+["走る", "はしる", "hashiru", "跑"],
+["バス", "バス", "basu", "公車"],
+["バター", "バター", "bataa", "奶油"],
+["二十歳", "はたち", "hatachi", "二十歲"],
+["働く", "はたらく", "hataraku", "工作"],
+["八", "はち", "hachi", "八"],
+["二十日", "はつか", "hatsuka", "二十號、二十天"],
+["花", "はな", "hana", "花"],
+["鼻", "はな", "hana", "鼻子"],
+["話", "はなし", "hanashi", "話、說法"],
+["話す", "はなす", "hanasu", "說、講"],
+["母", "はは", "haha", "（自己的）媽媽"],
+["早い", "はやい", "hayai", "早的"],
+["速い", "はやい", "hayai", "快的"],
+["春", "はる", "haru", "春天"],
+["貼る", "はる", "haru", "貼"],
+["晴れ", "はれ", "hare", "晴天"],
+["晴れる", "はれる", "hareru", "放晴"],
+["半", "はん", "han", "半"],
+["晩", "ばん", "ban", "晚上"],
+["～番", "ばん", "ban", "～號"],
+["パン", "パン", "pan", "麵包"],
+["ハンカチ", "ハンカチ", "hankachi", "手帕"],
+["番号", "ばんごう", "bangou", "號碼"],
+["晩御飯", "ばんごはん", "bangohan", "晚餐"],
+["半分", "はんぶん", "hanbun", "一半"],
+["東", "ひがし", "higashi", "東"],
+["～匹", "ひき", "hiki", "～隻（小動物）"],
+["引く", "ひく", "hiku", "拉；查（字典）"],
+["弾く", "ひく", "hiku", "彈（樂器）"],
+["低い", "ひくい", "hikui", "低的、矮的"],
+["飛行機", "ひこうき", "hikouki", "飛機"],
+["左", "ひだり", "hidari", "左邊"],
+["人", "ひと", "hito", "人"],
+["一つ", "ひとつ", "hitotsu", "一個"],
+["一月", "ひとつき", "hitotsuki", "一個月"],
+["一人", "ひとり", "hitori", "一個人"],
+["暇", "ひま", "hima", "空閒"],
+["百", "ひゃく", "hyaku", "百"],
+["病院", "びょういん", "byouin", "醫院"],
+["病気", "びょうき", "byouki", "生病"],
+["平仮名", "ひらがな", "hiragana", "平假名"],
+["昼", "ひる", "hiru", "中午、白天"],
+["昼御飯", "ひるごはん", "hirugohan", "午餐"],
+["広い", "ひろい", "hiroi", "寬敞的"],
+["フィルム", "フィルム", "fuirumu", "底片"],
+["封筒", "ふうとう", "fuutou", "信封"],
+["プール", "プール", "puuru", "游泳池"],
+["フォーク", "フォーク", "fuooku", "叉子"],
+["吹く", "ふく", "fuku", "（風）吹；吹奏"],
+["服", "ふく", "fuku", "衣服"],
+["二つ", "ふたつ", "futatsu", "兩個"],
+["豚肉", "ぶたにく", "butaniku", "豬肉"],
+["二人", "ふたり", "futari", "兩個人"],
+["二日", "ふつか", "futsuka", "二號、兩天"],
+["太い", "ふとい", "futoi", "粗的、胖的"],
+["冬", "ふゆ", "fuyu", "冬天"],
+["降る", "ふる", "furu", "下（雨、雪）"],
+["古い", "ふるい", "furui", "舊的"],
+["～分", "ふん", "fun", "～分（鐘）"],
+["文章", "ぶんしょう", "bunshou", "文章"],
+["ページ", "ページ", "peeji", "頁"],
+["下手", "へた", "heta", "不擅長"],
+["ベッド", "ベッド", "beddo", "床"],
+["ペット", "ペット", "petto", "寵物"],
+["部屋", "へや", "heya", "房間"],
+["辺", "へん", "hen", "一帶、附近"],
+["ペン", "ペン", "pen", "筆"],
+["勉強", "べんきょう", "benkyou", "學習、念書"],
+["便利", "べんり", "benri", "方便"],
+["帽子", "ぼうし", "boushi", "帽子"],
+["ボールペン", "ボールペン", "boorupen", "原子筆"],
+["ポケット", "ポケット", "poketto", "口袋"],
+["欲しい", "ほしい", "hoshii", "想要"],
+["ポスト", "ポスト", "posuto", "郵筒"],
+["細い", "ほそい", "hosoi", "細的、瘦的"],
+["ボタン", "ボタン", "botan", "鈕扣、按鈕"],
+["ホテル", "ホテル", "hoteru", "飯店"],
+["本", "ほん", "hon", "書"],
+["～本", "ほん", "hon", "～枝、～瓶（細長物）"],
+["本棚", "ほんだな", "hondana", "書架"],
+["本当", "ほんとう", "hontou", "真的"],
+["～枚", "まい", "mai", "～張、～件（扁平物）"],
+["毎朝", "まいあさ", "maiasa", "每天早上"],
+["毎月", "まいげつ", "maigetsu", "每個月"],
+["毎週", "まいしゅう", "maishuu", "每星期"],
+["毎日", "まいにち", "mainichi", "每天"],
+["毎年", "まいねん", "mainen", "每年"],
+["毎晩", "まいばん", "maiban", "每天晚上"],
+["前", "まえ", "mae", "前面"],
+["～前", "まえ", "mae", "～之前、～前面"],
+["曲る", "まがる", "magaru", "轉彎"],
+["まずい", "まずい", "mazui", "難吃的"],
+["また", "また", "mata", "又、再"],
+["まだ", "まだ", "mada", "還、尚未"],
+["町", "まち", "machi", "城鎮"],
+["待つ", "まつ", "matsu", "等待"],
+["まっすぐ", "まっすぐ", "massugu", "直直地"],
+["マッチ", "マッチ", "matchi", "火柴"],
+["窓", "まど", "mado", "窗戶"],
+["丸い", "まるい", "marui", "圓的"],
+["万", "まん", "man", "萬"],
+["万年筆", "まんねんひつ", "mannenhitsu", "鋼筆"],
+["磨く", "みがく", "migaku", "刷（牙）、擦亮"],
+["右", "みぎ", "migi", "右邊"],
+["短い", "みじかい", "mijikai", "短的"],
+["水", "みず", "mizu", "水"],
+["店", "みせ", "mise", "店"],
+["見せる", "みせる", "miseru", "給～看"],
+["道", "みち", "michi", "路"],
+["三日", "みっか", "mikka", "三號、三天"],
+["三つ", "みっつ", "mittsu", "三個"],
+["緑", "みどり", "midori", "綠色"],
+["皆さん", "みなさん", "minasan", "各位"],
+["南", "みなみ", "minami", "南"],
+["耳", "みみ", "mimi", "耳朵"],
+["見る", "みる", "miru", "看"],
+["みんな", "みんな", "minna", "大家"],
+["六日", "むいか", "muika", "六號、六天"],
+["向こう", "むこう", "mukou", "對面、那邊"],
+["難しい", "むずかしい", "muzukashii", "難的"],
+["六つ", "むっつ", "muttsu", "六個"],
+["村", "むら", "mura", "村子"],
+["目", "め", "me", "眼睛"],
+["メートル", "メートル", "meetoru", "公尺"],
+["眼鏡", "めがね", "megane", "眼鏡"],
+["もう", "もう", "mou", "已經；再"],
+["木曜日", "もくようび", "mokuyoubi", "星期四"],
+["もしもし", "もしもし", "moshimoshi", "喂（電話）"],
+["持つ", "もつ", "motsu", "拿、持有"],
+["もっと", "もっと", "motto", "更"],
+["物", "もの", "mono", "東西"],
+["門", "もん", "mon", "大門"],
+["問題", "もんだい", "mondai", "問題"],
+["～屋", "や", "ya", "～店"],
+["八百屋", "やおや", "yaoya", "蔬果店"],
+["野菜", "やさい", "yasai", "蔬菜"],
+["易しい", "やさしい", "yasashii", "簡單的"],
+["安い", "やすい", "yasui", "便宜的"],
+["休み", "やすみ", "yasumi", "休假、休息"],
+["休む", "やすむ", "yasumu", "休息、請假"],
+["八つ", "やっつ", "yattsu", "八個"],
+["山", "やま", "yama", "山"],
+["やる", "やる", "yaru", "做；餵、給（晚輩）"],
+["夕方", "ゆうがた", "yuugata", "傍晚"],
+["夕飯", "ゆうはん", "yuuhan", "晚飯"],
+["郵便局", "ゆうびんきょく", "yuubinkyoku", "郵局"],
+["昨夜", "ゆうべ", "yuube", "昨晚"],
+["有名", "ゆうめい", "yuumei", "有名"],
+["雪", "ゆき", "yuki", "雪"],
+["ゆっくりと", "ゆっくりと", "yukkurito", "慢慢地"],
+["八日", "ようか", "youka", "八號、八天"],
+["洋服", "ようふく", "youfuku", "（西式）衣服"],
+["よく", "よく", "yoku", "常常；好好地"],
+["横", "よこ", "yoko", "旁邊、橫"],
+["四日", "よっか", "yokka", "四號、四天"],
+["四つ", "よっつ", "yottsu", "四個"],
+["呼ぶ", "よぶ", "yobu", "叫、呼喚"],
+["読む", "よむ", "yomu", "讀"],
+["夜", "よる", "yoru", "夜晚"],
+["弱い", "よわい", "yowai", "弱的"],
+["来月", "らいげつ", "raigetsu", "下個月"],
+["来週", "らいしゅう", "raishuu", "下星期"],
+["来年", "らいねん", "rainen", "明年"],
+["ラジオ", "ラジオ", "rajio", "收音機"],
+["ラジオカセ", "ラジオカセ", "rajiokase", "收錄音機"],
+["りっぱ", "りっぱ", "rippa", "出色、氣派"],
+["留学生", "りゅうがくせい", "ryuugakusei", "留學生"],
+["両親", "りょうしん", "ryoushin", "父母"],
+["料理", "りょうり", "ryouri", "料理、做菜"],
+["旅行", "りょこう", "ryokou", "旅行"],
+["零", "れい", "rei", "零"],
+["冷蔵庫", "れいぞうこ", "reizouko", "冰箱"],
+["レコード", "レコード", "rekoodo", "唱片"],
+["レストラン", "レストラン", "resutoran", "餐廳"],
+["練習", "れんしゅう", "renshuu", "練習"],
+["廊下", "ろうか", "rouka", "走廊"],
+["六", "ろく", "roku", "六"],
+["ワイシャツ", "ワイシャツ", "waishatsu", "（男）襯衫"],
+["若い", "わかい", "wakai", "年輕的"],
+["分かる", "わかる", "wakaru", "懂、明白"],
+["忘れる", "わすれる", "wasureru", "忘記"],
+["私", "わたし", "watashi", "我"],
+["渡す", "わたす", "watasu", "交給"],
+["渡る", "わたる", "wataru", "過（橋、馬路）"],
+["悪い", "わるい", "warui", "壞的"],
+["おはようございます", "おはようございます", "ohayougozaimasu", "早安"],
+["こんにちは", "こんにちは", "konnichiha", "你好（白天）"],
+["こんばんは", "こんばんは", "konbanha", "晚上好"],
+["ありがとうございます", "ありがとうございます", "arigatougozaimasu", "謝謝"],
+["すみません", "すみません", "sumimasen", "不好意思、對不起"],
+["ごめんなさい", "ごめんなさい", "gomennasai", "對不起"],
+["さようなら", "さようなら", "sayounara", "再見"],
+["おやすみなさい", "おやすみなさい", "oyasuminasai", "晚安（睡前）"],
+["はじめまして", "はじめまして", "hajimemashite", "初次見面"],
+["よろしくお願いします", "よろしくおねがいします", "yoroshikuonegaishimasu", "請多指教"],
+["お願いします", "おねがいします", "onegaishimasu", "拜託、麻煩了"],
+["いただきます", "いただきます", "itadakimasu", "開動了"],
+["ごちそうさまでした", "ごちそうさまでした", "gochisousamadeshita", "多謝款待"],
+["いらっしゃいませ", "いらっしゃいませ", "irasshaimase", "歡迎光臨"],
+["いってきます", "いってきます", "ittekimasu", "我出門了"],
+["いってらっしゃい", "いってらっしゃい", "itterasshai", "路上小心、慢走"],
+["ただいま", "ただいま", "tadaima", "我回來了"],
+["おかえりなさい", "おかえりなさい", "okaerinasai", "你回來啦"],
+["おめでとうございます", "おめでとうございます", "omedetougozaimasu", "恭喜"],
+["失礼します", "しつれいします", "shitsureishimasu", "打擾了、告辭"],
+["お大事に", "おだいじに", "odaijini", "請保重"],
+["どういたしまして", "どういたしまして", "douitashimashite", "不客氣"],
+["始める", "はじめる", "hajimeru", "開始（他動詞）"],
+["消しゴム", "けしゴム", "keshigomu", "橡皮擦"],
+["風呂", "ふろ", "furo", "澡盆、洗澡"],
+["りんご", "りんご", "ringo", "蘋果"],
+["みかん", "みかん", "mikan", "橘子"],
+["バナナ", "バナナ", "banana", "香蕉"],
+["お湯", "おゆ", "oyu", "熱水"],
+["全然", "ぜんぜん", "zenzen", "（＋否定）完全不"],
+["本当に", "ほんとうに", "hontouni", "真的"],
+["日本語", "にほんご", "nihongo", "日語"]
+];
+function eSave(k,o){try{localStorage.setItem(k,JSON.stringify(o));}catch(e){}}
+function eLoad(k){try{return JSON.parse(localStorage.getItem(k))||{};}catch(e){return {};}}
+var vErr=eLoad("nikki_vErr"),gErr=eLoad("nikki_gErr");
+var vSeen=eLoad("nikki_vSeen"),gSeen=eLoad("nikki_gSeen"),kSeen=eLoad("nikki_kSeen"),wSeen=eLoad("nikki_wSeen"),lSeen=eLoad("nikki_lSeen"),sSeen=eLoad("nikki_sSeen2");
+function rng(n){var a=[];for(var i=0;i<n;i++)a.push(i);return a;}
+function pickQ(pool,seen,err,last){
+  var i,c,ks;
+  var un=[];
+  for(c=0;c<pool.length;c++)if(!seen[pool[c]])un.push(pool[c]);
+  if(un.length)return un[Math.floor(Math.random()*un.length)];
+  if(err){
+    ks=Object.keys(err).filter(function(k){return pool.indexOf(parseInt(k,10))>=0;});
+    if(ks.length&&Math.random()<0.35){
+      i=parseInt(ks[Math.floor(Math.random()*ks.length)],10);
+      if(i!==last)return i;
+    }
+  }
+  if(pool.length===1)return pool[0];
+  do{i=pool[Math.floor(Math.random()*pool.length)];}while(i===last);
+  return i;
+}
+var Vs={i:-1,opts:null,done:false,pick:-1,last:-1,dir:0};
+function newVocabQ(){
+  var i=pickQ(rng(VOCAB.length),vSeen,vErr,Vs.last);
+  Vs.last=i;Vs.i=i;
+  vSeen[i]=1;eSave("nikki_vSeen",vSeen);
+  var used={};used[VOCAB[i][3]]=1;
+  var usedW={};usedW[VOCAB[i][0]]=1;
+  var cand=[],guard=0;
+  while(cand.length<3&&guard<900){
+    guard++;
+    var j=Math.floor(Math.random()*VOCAB.length);
+    if(Vs.dir===0){
+      var g=VOCAB[j][3];
+      if(!used[g]){used[g]=1;cand.push(j);}
+    }else{
+      var w=VOCAB[j][0],g2=VOCAB[j][3];
+      if(!usedW[w]&&!used[g2]){usedW[w]=1;used[g2]=1;cand.push(j);}
+    }
+  }
+  Vs.opts=shuffle([i,cand[0],cand[1],cand[2]]);
+  Vs.done=false;Vs.pick=-1;renderVocab();
+}
+function renderVocab(){
+  var head="<div class='rowline'>"+
+    "<button class='btn mini"+(Vs.dir===0?" primary":"")+"' id='vD0'>日→中</button>"+
+    "<button class='btn mini"+(Vs.dir===1?" primary":"")+"' id='vD1'>中→日</button>"+
+    "<span class='grow'></span>"+
+  "</div>";
+  var body;
+  if(Vs.i<0){
+    body="<div class='card centerc'><p>看日文選中文，或切成「中→日」反向練回想。<br>沒出過的字優先出；答錯的字會加重出現，答對一次就恢復。</p><button class='btn primary' id='vStart'>開始</button></div>";
+  }else{
+    var w=VOCAB[Vs.i];
+    var opts="<div class='opts'>";
+    for(var k=0;k<Vs.opts.length;k++){
+      var oid=Vs.opts[k],cls="opt";
+      if(Vs.done){
+        if(oid===Vs.i)cls+=" correct";
+        else if(oid===Vs.pick)cls+=" wrong";
+      }
+      opts+="<button class='"+cls+"' data-i='"+oid+"'"+(Vs.done?" disabled":"")+">"+(Vs.dir===0?VOCAB[oid][3]:VOCAB[oid][0])+"</button>";
+    }
+    opts+="</div>";
+    var reveal="";
+    if(Vs.done){
+      reveal="<div class='reveal'>"+
+        "<p class='romaji' style='text-align:center'>"+w[1]+"　"+w[2]+"</p>"+
+        "<div class='tools' style='margin-top:8px'>"+
+          "<button class='btn' id='vPlay'>▶ 朗讀</button>"+
+          "<button class='btn' id='vSlow'>慢速</button>"+
+          "<span class='sp'></span>"+
+          "<button class='btn primary' id='vNext'>下一題 ›</button>"+
+        "</div>"+
+      "</div>";
+    }
+    body="<div class='card'><p class='qword'>"+(Vs.dir===0?w[0]:w[3])+"</p>"+opts+reveal+"</div>";
+  }
+  view.innerHTML=head+body;
+  function reQ(){if(Vs.i!==-1)newVocabQ();else renderVocab();}
+  document.getElementById("vD0").onclick=function(){if(Vs.dir!==0){Vs.dir=0;reQ();}};
+  document.getElementById("vD1").onclick=function(){if(Vs.dir!==1){Vs.dir=1;reQ();}};
+  var st=document.getElementById("vStart");
+  if(st)st.onclick=newVocabQ;
+  var pl=document.getElementById("vPlay");
+  if(pl)pl.onclick=function(){speak(VOCAB[Vs.i][1],false);};
+  var sl=document.getElementById("vSlow");
+  if(sl)sl.onclick=function(){speak(VOCAB[Vs.i][1],true);};
+  var nx=document.getElementById("vNext");
+  if(nx)nx.onclick=newVocabQ;
+  if(Vs.i>=0&&!Vs.done){
+    var obs=view.querySelectorAll(".opt");
+    for(var b=0;b<obs.length;b++){
+      obs[b].onclick=function(){
+        Vs.pick=parseInt(this.getAttribute("data-i"),10);
+        Vs.done=true;
+        if(Vs.pick===Vs.i){if(vErr[Vs.i])delete vErr[Vs.i];}
+        else{vErr[Vs.i]=1;}
+        eSave("nikki_vErr",vErr);
+        renderVocab();
+      };
+    }
+  }
+}
+
+/* ---------- 文法測驗 ---------- */
+var GR=[
+["私[わたし]（　）田中[たなか]です。","は","を","に","で","〜は〜です：主題＋判斷句「A是B」；主題用「は」。"],
+["それは私[わたし]の傘[かさ]（　）ありません。","じゃ","が","を","に","〜じゃありません：「〜です」的否定「不是～」。"],
+["お名前[なまえ]は何[なん]です（　）。","か","よ","ね","を","〜か：句尾加「か」構成疑問句。"],
+["これは日本語[にほんご]（　）本[ほん]です。","の","は","を","が","名詞＋の＋名詞：「～的…」。"],
+["私[わたし]は学生[がくせい]です。彼[かれ]（　）学生[がくせい]です。","も","は","が","を","〜も：「也～」；放在は、が的位置。"],
+["（　）は何[なん]ですか。――それはカメラです。","これ","ここ","この","どれ","これ／それ／あれ：指東西的指示詞；對方用それ回答，表示東西在自己手邊，所以問的是これ。"],
+["（　）人[ひと]は先生[せんせい]です。","あの","あれ","あそこ","どれ","この／その／あの＋名詞：後面必須接名詞；單獨使用時才用これ／それ／あれ。"],
+["すみません、トイレは（　）ですか。","どこ","どれ","何[なに]","誰[だれ]","どこ：問地點「哪裡」。"],
+["昨日[きのう]、映画[えいが]（　）見[み]ました。","を","が","に","へ","〜を：他動詞的受詞用「を」。"],
+["毎朝[まいあさ]、七時[しちじ]（　）起[お]きます。","に","で","を","へ","時刻＋に：具體的時間點用「に」。"],
+["机[つくえ]の上[うえ]に本[ほん]（　）あります。","が","を","へ","で","〜が＋あります：存在句中，存在的東西用「が」。"],
+["明日[あした]、友達[ともだち]（　）会[あ]います。","に","を","が","で","会う的對象用「に」：「〜に会います」。"],
+["図書館[としょかん]（　）勉強[べんきょう]します。","で","に","を","へ","動作場所＋で：「在～做…」；「に」表示存在的地點。"],
+["はし（　）ご飯[はん]を食[た]べます。","で","に","を","と","道具・手段＋で：「用～」。"],
+["来週[らいしゅう]、大阪[おおさか]（　）行[い]きます。","へ","を","で","が","場所＋へ：移動的方向，助詞「へ」讀作 e。"],
+["弟[おとうと]（　）一緒[いっしょ]に公園[こうえん]へ行[い]きました。","と","が","を","で","人＋と一緒に：「和～一起」。"],
+["銀行[ぎんこう]は九時[くじ]（　）三時[さんじ]までです。","から","まで","を","に","〜から〜まで：「從～到～」。"],
+["中国[ちゅうごく]は日本[にほん]（　）大[おお]きいです。","より","から","まで","ほど","AはBより〜：「A比B～」。"],
+["紅茶[こうちゃ]よりコーヒー（　）ほうが好[す]きです。","の","が","を","は","〜のほうが：比較「～這邊比較…」；ほう前面接「の」。"],
+["クラス（　）誰[だれ]がいちばん背[せ]が高[たか]いですか。","で","に","を","から","範圍＋で＋いちばん：「在～之中最…」。"],
+["部屋[へや]に猫[ねこ]が（　）。","います","あります","です","します","います／あります：有生命用「います」、無生命用「あります」。"],
+["すみません、切手[きって]を（　）ください。","三枚[さんまい]","三枚[さんまい]を","三枚[さんまい]の","三枚[さんまい]に","數量詞的位置：直接放在動詞前面，後面不加助詞。"],
+["この料理[りょうり]はあまり（　）です。","おいしくない","おいしい","おいしかった","おいしくて","あまり＋否定：「不太～」；い形容詞否定＝〜くない。"],
+["昨日[きのう]はとても（　）です。","暑[あつ]かった","暑[あつ]い","暑[あつ]くて","暑[あつ]いでした","い形容詞過去形：暑い→暑かった；「暑いでした」是常見的錯誤。"],
+["この町[まち]は静[しず]か（　）、きれいです。","で","くて","に","と","な形容詞的連接用「で」：「又～又…」；「くて」是い形容詞專用。"],
+["安[やす]（　）おいしい店[みせ]を知[し]っています。","くて","で","かった","いと","い形容詞＋くて：連接形容詞「又便宜又好吃」。"],
+["田中[たなか]さんは（　）人[ひと]です。","親切[しんせつ]な","親切[しんせつ]","親切[しんせつ]だ","親切[しんせつ]に","な形容詞＋な＋名詞：修飾名詞時要加「な」。"],
+["天気[てんき]が（　）なりました。","よく","いい","よい","いく","い形容詞＋くなる：「變得～」；「いい」要用「よく」變化。"],
+["私[わたし]は犬[いぬ]（　）好[す]きです。","が","を","に","で","〜が好き：好き、嫌い、上手、下手的對象用「が」。"],
+["新[あたら]しい自転車[じてんしゃ]（　）欲[ほ]しいです。","が","を","に","の","〜が欲しい：「想要（東西）」，對象用「が」。"],
+["日本[にほん]へ（　）たいです。","行[い]き","行[い]く","行[い]って","行[い]った","ます形去ます＋たい：「想～」；行きます→行きたい。"],
+["疲[つか]れましたね。少[すこ]し（　）ましょう。","休[やす]み","休[やす]む","休[やす]んで","休[やす]まない","〜ましょう：「～吧」；接ます形去ます。"],
+["よかったら、一緒[いっしょ]に昼[ひる]ご飯[はん]を食[た]べ（　）か。","ません","ないで","ました","たい","〜ませんか：「要不要～」的邀請。"],
+["荷物[にもつ]が重[おも]そうですね。持[も]ち（　）か。","ましょう","ません","ました","たいです","〜ましょうか：主動提議「我來～吧？」。"],
+["ここに名前[なまえ]を（　）ください。","書[か]いて","書[か]く","書[か]きて","書[か]かない","て形＋ください：「請～」；書く→書いて。"],
+["病院[びょういん]ですから、ここでたばこを（　）ください。","吸[す]わないで","吸[す]って","吸[す]わなくて","吸[す]いないで","ない形＋でください：「請不要～」；吸う→吸わない→吸わないで。"],
+["この辞書[じしょ]を（　）もいいですか。","借[か]りて","借[か]りる","借[か]りた","借[か]りない","て形＋もいいですか：「可以～嗎」。"],
+["美術館[びじゅつかん]の中[なか]では、写真[しゃしん]を撮[と]って（　）。","はいけません","もいいです","ください","います","て形＋はいけません：「不可以～」，表示禁止。"],
+["妹[いもうと]は今[いま]、テレビを（　）います。","見[み]て","見[み]る","見[み]た","見[み]に","て形＋います（進行）：「正在～」。"],
+["姉[あね]は大阪[おおさか]に（　）います。","住[す]んで","住[す]みて","住[す]む","住[す]んだ","て形＋います（狀態）：住む→住んで；む→んで的音便。"],
+["手[て]を（　）から、ご飯[はん]を食[た]べます。","洗[あら]って","洗[あら]う","洗[あら]った","洗[あら]い","て形＋から：「做完A之後再B」。"],
+["宿題[しゅくだい]を（　）あとで、遊[あそ]びに行[い]きます。","した","する","して","します","た形＋あとで：「做完～之後」；前面接た形。"],
+["寝[ね]る（　）に、歯[は]をみがきます。","前[まえ]","あと","とき","から","辭書形＋前に：「做～之前」。"],
+["勉強[べんきょう]する（　）、いつも音楽[おんがく]を聞[き]きます。","とき","こと","もの","ほう","〜とき：「～的時候」。"],
+["私[わたし]は漢字[かんじ]を読[よ]むこと（　）できます。","が","を","に","で","辭書形＋ことができる：「會～、能～」；こと後面用「が」。"],
+["音楽[おんがく]を（　）のが好[す]きです。","聞[き]く","聞[き]いて","聞[き]きます","聞[き]けば","辭書形＋の：把動作名詞化「喜歡聽音樂（這件事）」。"],
+["富士山[ふじさん]に（　）ことがありますか。","登[のぼ]った","登[のぼ]らない","登[のぼ]って","登[のぼ]り","た形＋ことがある：「曾經～過」。"],
+["日曜日[にちようび]は、本[ほん]を（　）、映画[えいが]を見[み]たりします。","読[よ]んだり","読[よ]んで","読[よ]んだ","読[よ]みたり","〜たり〜たりする：列舉幾件代表性的事；読む→読んだり。"],
+["時間[じかん]がありません（　）、タクシーで行[い]きます。","から","が","でも","まで","〜から：「因為～」，接在理由句的後面。"],
+["明日[あした]はたぶん雨[あめ]（　）。","でしょう","でしたか","だろうです","ですた","〜でしょう：「大概～吧」的推測；常和たぶん一起用。"],
+["日本語[にほんご]の勉強[べんきょう]は面白[おもしろ]いと（　）。","思[おも]います","します","あります","なります","〜と思います：「我覺得～」；想法內容＋と。"],
+["先生[せんせい]は「明日[あした]テストをします」と（　）。","言[い]いました","しました","ありました","なりました","「〜」と言いました：引用某人說過的話。"],
+["「もう宿題[しゅくだい]をしましたか。」「いいえ、（　）です。」","まだ","もう","とても","ちょっと","もう／まだ：「已經～了嗎」用もう；還沒做時回答「まだです」。"],
+["（　）昼[ひる]ご飯[はん]を食[た]べましたか。","もう","まだ","とても","よく","もう＋た形：「已經～了嗎」。"],
+["駅[えき]から家[いえ]まで十分[じゅっぷん]（　）かかります。","ぐらい","ごろ","だけ","しか","數量＋ぐらい：「大約～（的量）」；時間點才用「ごろ」。"],
+["毎朝[まいあさ]六時[ろくじ]（　）に起[お]きます。","ごろ","だけ","しか","など","時刻＋ごろ：「～點左右」。"],
+["教室[きょうしつ]に学生[がくせい]が一人[ひとり]しか（　）。","いません","います","あります","です","〜しか＋否定：「只有～（而已）」，後面一定要接否定形。"],
+["冷蔵庫[れいぞうこ]にジュースが一本[いっぽん]（　）あります。","だけ","しか","ごろ","など","〜だけ：「只有～」，後面接肯定；「しか」才接否定。"],
+["昨日[きのう]は何[なに]（　）食[た]べませんでした。","も","か","を","が","疑問詞＋も＋否定：「什麼也沒～」。"],
+["のどが渇[かわ]きました。何[なに]（　）飲[の]みたいです。","か","も","を","は","疑問詞＋か：「某～」；何か＝隨便什麼、某樣東西。"],
+["かばんの中[なか]にペン（　）ノートなどがあります。","や","と","も","を","〜や〜など：舉例列出「～啦～之類的」；「と」是全部列出。"],
+["すみません、水[みず]（　）ください。","を","が","は","に","〜をください：「請給我～」。"],
+["すみません、この漢字[かんじ]の読[よ]み方[かた]が（　）。","分[わ]かりません","知[し]りません","しません","ありません","〜が分かる：「懂」的對象用「が」；「知る」則要用「を知りません」。"],
+["時間[じかん]がないから、（　）行[い]きましょう。","早[はや]く","早[はや]い","早[はや]いに","早[はや]くて","い形容詞＋く＋動詞：副詞用法「早點～」。"],
+["昨日[きのう]は妹[いもうと]の誕生日[たんじょうび]でしたから、私[わたし]はケーキを買[か]って、妹[いもうと]に（　）。","あげました","もらいました","くれました","しました","あげます：我（或某人）給別人東西；「AはBに〜をあげます」。"],
+["兄[あに]が私[わたし]に古[ふる]い辞書[じしょ]を（　）。","くれました","あげました","もらいました","ありました","くれます：別人給「我（或我這邊的人）」東西時，要用くれます，不用あげます。"],
+["私[わたし]は兄[あに]から古[ふる]い辞書[じしょ]を（　）。","もらいました","あげました","くれました","いました","もらいます：「AはBに／Bから〜をもらいます」＝A從B那裡得到東西。"],
+["明日[あした]は試験[しけん]ですから、今夜[こんや]は勉強[べんきょう]し（　）。","なければなりません","てもいいです","ないでください","ませんでした","〜なければなりません：「必須～」；接ない形去ない（勉強しない→勉強しなければなりません）。"],
+["明日[あした]は休[やす]みですから、早[はや]く起[お]き（　）。","なくてもいいです","なければなりません","てはいけません","ましょうか","〜なくてもいいです：「不～也可以」；和「なければなりません」是一組。"],
+["コーヒーと紅茶[こうちゃ]と、（　）が好[す]きですか。","どちら","どれ","何[なに]","どう","AとBと、どちらが〜：兩者選一的疑問詞用どちら；三個以上才用どれ。"],
+["デパートへ靴[くつ]を買[か]い（　）行[い]きます。","に","を","で","へ","ます形去ます＋に＋行きます／来ます：「去（來）做～」；買います→買いに行きます。"],
+["あれは大阪[おおさか]へ（　）電車[でんしゃ]です。","行[い]く","行[い]きます","行[い]って","行[い]き","動詞辭書形＋名詞：用動詞句修飾名詞「往～的…」；修飾名詞時不用ます形。"],
+["毎日[まいにち]、バス（　）会社[かいしゃ]へ行[い]きます。","で","に","を","と","交通工具＋で：「搭～去」；走路去則說「歩[ある]いて行きます」。"],
+["このボタンを押[お]す（　）、お釣[つ]りが出[で]ます。","と","たら","ば","ても","辭書形＋と：「一～就…」，用於自然結果、機器操作等固定結果（此項通行分級多歸 N4）。"],
+["道[みち]が分[わ]かりませんでしたから、日本人[にほんじん]に地図[ちず]を書[か]いて（　）。","もらいました","あげました","くれました","いました","て形＋もらいます：「請別人為我做～」；てあげます＝我為別人做、てくれます＝別人（主動）為我做（此組多歸 N4）。"],
+["日本[にほん]へ（　）、富士山[ふじさん]に登[のぼ]りたいです。","行[い]ったら","行[い]くと","行[い]っても","行[い]きたら","た形＋ら：「（如果／等到）～就…」；後面可以接希望、請求，「〜と」後面則不行（此項多歸 N4）。"]
+];
+var Gs={i:-1,opts:null,done:false,pick:"",last:-1,scope:-1,mode:0};
+var RC=[
+[["私[わたし]は","毎朝[まいあさ]","七時[しちじ]に","起[お]きます。"],"我每天早上七點起床。"],
+[["昨日[きのう]","友達[ともだち]と","映画[えいが]を","見[み]ました。"],"昨天和朋友看了電影。"],
+[["部屋[へや]の","机[つくえ]の上[うえ]に","猫[ねこ]が","います。"],"房間的桌上有貓。"],
+[["銀行[ぎんこう]は","九時[くじ]から","三時[さんじ]まで","です。"],"銀行從九點到三點。"],
+[["日本語[にほんご]の","勉強[べんきょう]は","面白[おもしろ]いと","思[おも]います。"],"我覺得學日語很有趣。"],
+[["雨[あめ]ですから","タクシーで","家[いえ]へ","帰[かえ]ります。"],"因為下雨，搭計程車回家。"],
+[["ここで","写真[しゃしん]を","撮[と]っては","いけません。"],"這裡不可以拍照。"],
+[["ご飯[はん]を","食[た]べる前[まえ]に","手[て]を","洗[あら]います。"],"吃飯前先洗手。"],
+[["私[わたし]は","小[ちい]さい","犬[いぬ]が","好[す]きです。"],"我喜歡小狗。"],
+[["日曜日[にちようび]は","本[ほん]を読[よ]んだり","音楽[おんがく]を聞[き]いたり","します。"],"星期天會看看書、聽聽音樂。"],
+[["すみません、","水[みず]を","一杯[いっぱい]","ください。"],"不好意思，請給我一杯水。"],
+[["疲[つか]れましたから","少[すこ]し","休[やす]みたい","です。"],"因為累了，想休息一下。"],
+[["この漢字[かんじ]の","読[よ]み方[かた]を","教[おし]えて","ください。"],"請教我這個漢字的唸法。"],
+[["兄[あに]は","大阪[おおさか]の会社[かいしゃ]で","働[はたら]いて","います。"],"哥哥在大阪的公司工作。"],
+[["宿題[しゅくだい]をした","あとで","テレビを","見[み]ます。"],"寫完作業之後看電視。"],
+[["駅[えき]から","家[いえ]まで","歩[ある]いて","十分[じゅっぷん]ぐらいです。"],"從車站走到家大約十分鐘。"],
+[["来年[らいねん]","日本[にほん]へ","旅行[りょこう]に","行[い]きたいです。"],"明年想去日本旅行。"],
+[["コーヒーより","紅茶[こうちゃ]の","ほうが","好[す]きです。"],"比起咖啡更喜歡紅茶。"],
+[["教室[きょうしつ]に","学生[がくせい]が","一人[ひとり]しか","いません。"],"教室裡只有一個學生。"],
+[["晩[ばん]ご飯[はん]を","食[た]べてから","お風呂[ふろ]に","入[はい]ります。"],"吃完晚餐後洗澡。"]
+];
+var Rc={i:-1,seq:[],pick:[],done:false,last:-1};
+function grPool(){
+  if(Gs.scope<0)return rng(GR.length);
+  var s=GLSEC[Gs.scope],a=[];
+  for(var i=s[1];i<=s[2];i++)a.push(i);
+  return a;
+}
+function newGrammarQ(){
+  var i=pickQ(grPool(),gSeen,gErr,Gs.last);
+  Gs.last=i;Gs.i=i;
+  gSeen[i]=1;eSave("nikki_gSeen",gSeen);
+  var g=GR[i];
+  Gs.opts=shuffle([g[1],g[2],g[3],g[4]]);
+  Gs.done=false;Gs.pick="";
+  renderGrammar();
+}
+function newRcQ(){
+  var i;
+  do{i=Math.floor(Math.random()*RC.length);}while(i===Rc.last&&RC.length>1);
+  Rc.last=i;Rc.i=i;
+  var s;
+  do{s=shuffle(rng(4));}while(s[0]===0&&s[1]===1&&s[2]===2&&s[3]===3);
+  Rc.seq=s;Rc.pick=[];Rc.done=false;
+  renderGrammar();
+}
+function renderGrammar(){
+  var head="<div class='rowline'>"+
+    "<button class='btn mini"+(Gs.mode===0?" primary":"")+"' id='gM0'>選擇題</button>"+
+    "<button class='btn mini"+(Gs.mode===1?" primary":"")+"' id='gM1'>重組題</button>";
+  if(Gs.mode===0){
+    var sel="<select class='sel' id='gScope'><option value='-1'"+(Gs.scope<0?" selected":"")+">全部範圍</option>";
+    for(var s=0;s<GLSEC.length;s++)sel+="<option value='"+s+"'"+(Gs.scope===s?" selected":"")+">"+GLSEC[s][0]+"</option>";
+    sel+="</select>";
+    head+=sel+"<span class='grow'></span>";
+  }else{
+    head+="<span class='grow'></span><span class='score'>共 "+RC.length+" 題</span>";
+  }
+  head+="</div>";
+  var body;
+  if(Gs.mode===1){
+    if(Rc.i<0){newRcQ();return;}
+    var it=RC[Rc.i],ch="";
+    for(var k=0;k<4;k++){
+      var c=Rc.seq[k],used=Rc.pick.indexOf(c)>=0;
+      ch+="<button class='chunk"+(used?" used":"")+"' data-c='"+c+"'>"+rubyJP(it[0][c])+"</button>";
+    }
+    var ansTxt="";
+    for(var a=0;a<Rc.pick.length;a++)ansTxt+=rubyJP(it[0][Rc.pick[a]]);
+    var ok=Rc.done&&Rc.pick.every(function(x,idx){return x===idx;});
+    var ans="<div class='ansline"+(Rc.done?(ok?" ok":" bad"):"")+"'>"+(ansTxt||"<span class='faintt'>點下面的片段，照正確順序排出句子</span>")+"</div>";
+    var reveal="";
+    if(Rc.done){
+      var full=it[0].join("");
+      reveal="<div class='reveal'>"+
+        "<p class='jp' style='font-size:1.15rem'>"+rubyJP(full)+"</p>"+
+        "<p class='zh'>"+it[1]+"</p>"+
+        "<div class='tools' style='margin-top:10px'>"+
+          "<button class='btn' id='rcPlay'>▶ 朗讀</button>"+
+          "<span class='sp'></span>"+
+          "<button class='btn primary' id='rcNext'>下一題 ›</button>"+
+        "</div>"+
+      "</div>";
+    }
+    body="<div class='card'>"+ans+"<div class='chunkwrap'>"+ch+"</div>"+
+      "<div class='tools' style='margin-top:10px'><button class='btn mini' id='rcClear'>清除重排</button></div>"+reveal+"</div>";
+  }else if(Gs.i<0){
+    body="<div class='card centerc'><p>選出（　）裡正確的說法。<br>可以用上面的選單只練某一組文法點。<br>沒出過的題優先出；答錯的題會加重出現，答對一次就恢復。<br>還沒學過文法的話，先從「文法學習」分頁開始。</p><button class='btn primary' id='gStart'>開始</button></div>";
+  }else{
+    var g=GR[Gs.i];
+    var opts="<div class='opts'>";
+    for(var k2=0;k2<Gs.opts.length;k2++){
+      var o=Gs.opts[k2],cls="opt";
+      if(Gs.done){
+        if(o===g[1])cls+=" correct";
+        else if(o===Gs.pick)cls+=" wrong";
+      }
+      opts+="<button class='"+cls+"' data-o='"+k2+"'"+(Gs.done?" disabled":"")+">"+rubyJP(o)+"</button>";
+    }
+    opts+="</div>";
+    var reveal2="";
+    if(Gs.done){
+      reveal2="<div class='reveal'>"+
+        "<p class='jp' style='font-size:1.15rem'>"+rubyJP(g[0].replace("（　）","【"+g[1]+"】"))+"</p>"+
+        "<p class='romaji'>"+GRRM[Gs.i]+"</p>"+
+        "<p class='zh'>"+GRZH[Gs.i]+"</p>"+
+        "<div class='scene'>"+g[5]+"</div>"+
+        "<div class='tools' style='margin-top:12px'>"+
+          "<span class='sp'></span>"+
+          "<button class='btn primary' id='gNext'>下一題 ›</button>"+
+        "</div>"+
+      "</div>";
+    }
+    var skip=Gs.done?"":"<div class='tools' style='margin-top:10px'><span class='sp'></span><button class='btn mini' id='gSkip'>換一題</button></div>";
+    body="<div class='card'><p class='jp' style='font-size:1.25rem'>"+rubyJP(g[0])+"</p>"+opts+skip+reveal2+"</div>";
+  }
+  view.innerHTML=head+body;
+  document.getElementById("gM0").onclick=function(){if(Gs.mode!==0){Gs.mode=0;renderGrammar();}};
+  document.getElementById("gM1").onclick=function(){if(Gs.mode!==1){Gs.mode=1;Rc.i=-1;renderGrammar();}};
+  var sc=document.getElementById("gScope");
+  if(sc)sc.onchange=function(){Gs.scope=parseInt(this.value,10);if(Gs.i!==-1)newGrammarQ();else renderGrammar();};
+  var st=document.getElementById("gStart");
+  if(st)st.onclick=newGrammarQ;
+  var nx=document.getElementById("gNext");
+  if(nx)nx.onclick=newGrammarQ;
+  var sk=document.getElementById("gSkip");
+  if(sk)sk.onclick=newGrammarQ;
+  var rcc=document.getElementById("rcClear");
+  if(rcc)rcc.onclick=function(){Rc.pick=[];Rc.done=false;renderGrammar();};
+  var rcn=document.getElementById("rcNext");
+  if(rcn)rcn.onclick=newRcQ;
+  var rcp=document.getElementById("rcPlay");
+  if(rcp)rcp.onclick=function(){speak(kanaOnly(RC[Rc.i][0].join("")),false);};
+  if(Gs.mode===1&&!Rc.done){
+    var cbs=view.querySelectorAll(".chunk");
+    for(var cb=0;cb<cbs.length;cb++){
+      cbs[cb].onclick=function(){
+        var c=parseInt(this.getAttribute("data-c"),10);
+        if(Rc.pick.indexOf(c)>=0)return;
+        Rc.pick.push(c);
+        if(Rc.pick.length===4)Rc.done=true;
+        renderGrammar();
+      };
+    }
+  }
+  if(Gs.mode===0&&Gs.i>=0&&!Gs.done){
+    var obs=view.querySelectorAll(".opt");
+    for(var b=0;b<obs.length;b++){
+      obs[b].onclick=function(){
+        Gs.pick=Gs.opts[parseInt(this.getAttribute("data-o"),10)];
+        Gs.done=true;
+        if(Gs.pick===GR[Gs.i][1]){if(gErr[Gs.i])delete gErr[Gs.i];}
+        else{gErr[Gs.i]=1;}
+        eSave("nikki_gErr",gErr);
+        renderGrammar();
+      };
+    }
+  }
+}
+
+/* ---------- 漢字 ---------- */
+var KANJI=[
+["日", "にち、じつ", "ひ、び", "明日　あした（明天）／一日　いちにち（一天、一號）"],
+["一", "いち、いつ", "ひと、ひと・つ", "一　いち（一）／一日　いちにち（一天、一號）"],
+["国", "こく", "くに", "国　くに（國家、家鄉）／外国　がいこく（外國）"],
+["会", "かい、え", "あ・う、あ・わせる", "会う　あう（見面）／会社　かいしゃ（公司）"],
+["人", "じん、にん", "ひと、り", "人　ひと（人）／大人　おとな（大人）"],
+["年", "ねん", "とし", "年　とし（年、年紀）／去年　きょねん（去年）"],
+["大", "だい、たい", "おお、おお・きい", "大勢　おおぜい（很多人）／大人　おとな（大人）"],
+["十", "じゅう、じっ", "とお、と", "十　じゅう（十）／十日　とおか（十號、十天）"],
+["二", "に、じ", "ふた、ふた・つ", "二　に（二）／二つ　ふたつ（兩個）"],
+["本", "ほん", "もと", "本　ほん（書）／～本　ほん（～枝、～瓶（細長物））"],
+["中", "ちゅう", "なか、うち", "中　なか（裡面）／～中　じゅう（整～、～之中）"],
+["長", "ちょう", "なが・い、おさ", "長い　ながい（長的）"],
+["出", "しゅつ、すい", "で・る、で", "出す　だす（拿出去、倒（垃圾））／出口　でぐち（出口）"],
+["三", "さん、ぞう", "み、み・つ", "三　さん（三）／三日　みっか（三號、三天）"],
+["時", "じ", "とき、どき", "～時　じ（～點（鐘））／時間　じかん（時間）"],
+["行", "こう、ぎょう", "い・く、ゆ・く", "行く　いく（去）／銀行　ぎんこう（銀行）"],
+["社", "しゃ", "やしろ", "会社　かいしゃ（公司）"],
+["見", "けん", "み・る、み・える", "見る　みる（看）／見せる　みせる（給～看）"],
+["月", "げつ、がつ", "つき", "～月　がつ（～月）／今月　こんげつ（這個月）"],
+["分", "ぶん、ふん", "わ・ける、わ・け", "自分　じぶん（自己）／多分　たぶん（大概）"],
+["後", "ご、こう", "のち、うし・ろ", "後　あと（之後、後面）／後ろ　うしろ（後面）"],
+["前", "ぜん", "まえ、まえ", "前　まえ（前面）／午前　ごぜん（上午）"],
+["生", "せい、しょう", "い・きる、い・かす", "学生　がくせい（學生）／生徒　せいと（學生（中小學））"],
+["五", "ご", "いつ、いつ・つ", "五　ご（五）／五日　いつか（五號、五天）"],
+["間", "かん、けん", "あいだ、ま", "時間　じかん（時間）／～時間　じかん（～小時）"],
+["上", "じょう、しょう", "うえ、うえ", "上　うえ（上面）／上着　うわぎ（外套、上衣）"],
+["東", "とう", "ひがし", "東　ひがし（東）"],
+["四", "し", "よ、よ・つ", "四　し（四）／四日　よっか（四號、四天）"],
+["今", "こん、きん", "いま", "今　いま（現在）／今日　きょう（今天）"],
+["新", "しん", "あたら・しい、あら・た", "新聞　しんぶん（報紙）／新しい　あたらしい（新的）"],
+["金", "きん、こん", "かね、かな", "お金　おかね（錢）／金曜日　きんようび（星期五）"],
+["九", "きゅう、く", "ここの、ここの・つ", "九　きゅう（九）／九日　ここのか（九號、九天）"],
+["入", "にゅう、じゅ", "い・る、い・る", "入口　いりぐち（入口）／入る　はいる（進入）"],
+["立", "りつ、りゅう", "た・つ、た・つ", "立つ　たつ（站立）"],
+["手", "しゅ、ず", "て、て", "手　て（手）／切手　きって（郵票）"],
+["学", "がく", "まな・ぶ", "学生　がくせい（學生）／学校　がっこう（學校）"],
+["高", "こう", "たか・い、たか", "高い　たかい（高的、貴的）"],
+["円", "えん", "まる・い、まる", "～円　えん（～日圓）"],
+["子", "し、す", "こ、こ", "椅子　いす（椅子）／子供　こども（小孩）"],
+["目", "もく、ぼく", "め、め", "目　め（眼睛）"],
+["外", "がい、げ", "そと、ほか", "外　そと（外面）／外国　がいこく（外國）"],
+["言", "げん、ごん", "い・う、こと", "言う　いう（說）／言葉　ことば（詞語、語言）"],
+["八", "はち", "や、や・つ", "八　はち（八）／八つ　やっつ（八個）"],
+["六", "ろく、りく", "む、む・つ", "六　ろく（六）／六日　むいか（六號、六天）"],
+["下", "か、げ", "した、しも", "下　した（下面）／靴下　くつした（襪子）"],
+["来", "らい、たい", "く・る、きた・る", "来る　くる（來）／来月　らいげつ（下個月）"],
+["気", "き、け", "いき", "元気　げんき（有精神、健康）／天気　てんき（天氣）"],
+["小", "しょう", "ちい・さい、こ", "小さい　ちいさい（小的）／小さな　ちいさな（小的（連體詞））"],
+["七", "しち", "なな、なな・つ", "七　しち（七）／七つ　ななつ（七個）"],
+["山", "さん、せん", "やま", "山　やま（山）／沢山　たくさん（很多）"],
+["話", "わ", "はな・す、はなし", "話　はなし（話、說法）／電話　でんわ（電話）"],
+["多", "た", "おお・い、まさ・に", "多い　おおい（多的）／多分　たぶん（大概）"],
+["安", "あん", "やす・い、やす・まる", "安い　やすい（便宜的）"],
+["女", "じょ、にょ", "おんな、め", "女　おんな（女人）／女の子　おんなのこ（女孩）"],
+["北", "ほく", "きた", "北　きた（北）"],
+["午", "ご", "うま", "午後　ごご（下午）／午前　ごぜん（上午）"],
+["百", "ひゃく、びゃく", "もも", "百　ひゃく（百）／八百屋　やおや（蔬果店）"],
+["書", "しょ", "か・く、が・き", "書く　かく（寫）／辞書　じしょ（辭典）"],
+["先", "せん", "さき、ま・ず", "先　さき（前方、先）／先月　せんげつ（上個月）"],
+["名", "めい、みょう", "な、な", "名前　なまえ（名字）／有名　ゆうめい（有名）"],
+["川", "せん", "かわ", "川　かわ（河川）"],
+["千", "せん", "ち", "千　せん（千）"],
+["道", "どう、とう", "みち、いう", "道　みち（路）"],
+["水", "すい", "みず、みず", "水　みず（水）／水曜日　すいようび（星期三）"],
+["半", "はん", "なか・ば", "半　はん（半）／半分　はんぶん（一半）"],
+["男", "だん、なん", "おとこ、お", "男　おとこ（男人）／男の子　おとこのこ（男孩）"],
+["西", "せい、さい", "にし", "西　にし（西）"],
+["電", "でん", "—", "電気　でんき（電、電燈）／電車　でんしゃ（電車）"],
+["口", "こう、く", "くち", "口　くち（嘴巴）／入口　いりぐち（入口）"],
+["少", "しょう", "すく・ない、すこ・し", "少し　すこし（一點點）／少ない　すくない（少的）"],
+["校", "こう、きょう", "—", "学校　がっこう（學校）"],
+["語", "ご", "かた・る、かた・らう", "英語　えいご（英語）／～語　ご（～語）"],
+["空", "くう", "そら、あ・く", "空　そら（天空）"],
+["土", "ど、と", "つち", "土曜日　どようび（星期六）"],
+["木", "ぼく、もく", "き、こ", "木　き（樹、木頭）／木曜日　もくようび（星期四）"],
+["聞", "ぶん、もん", "き・く、き・こえる", "聞く　きく（聽、問）／新聞　しんぶん（報紙）"],
+["食", "しょく、じき", "く・う、く・らう", "食堂　しょくどう（食堂、餐廳）／食べ物　たべもの（食物）"],
+["車", "しゃ", "くるま", "車　くるま（車子）／電車　でんしゃ（電車）"],
+["何", "か", "なに、なん", "何　なん（什麼）／何～　なん（幾～、什麼～）"],
+["南", "なん、な", "みなみ", "南　みなみ（南）"],
+["足", "そく", "あし、た・りる", "足　あし（腳、腿）"],
+["万", "まん、ばん", "よろず", "万　まん（萬）／万年筆　まんねんひつ（鋼筆）"],
+["店", "てん", "みせ、たな", "店　みせ（店）／喫茶店　きっさてん（咖啡廳）"],
+["毎", "まい", "ごと、ごと・に", "毎朝　まいあさ（每天早上）／毎月　まいげつ（每個月）"],
+["白", "はく、びゃく", "しろ、しら", "白　しろ（白色）／白い　しろい（白色的）"],
+["古", "こ", "ふる・い、ふる", "古い　ふるい（舊的）"],
+["天", "てん", "あまつ、あめ", "天気　てんき（天氣）"],
+["買", "ばい", "か・う", "買う　かう（買）／買い物　かいもの（購物、買菜）"],
+["週", "しゅう", "—", "今週　こんしゅう（這星期）／先週　せんしゅう（上星期）"],
+["母", "ぼ", "はは、も", "母　はは（（自己的）媽媽）／お母さん　おかあさん（媽媽（稱呼））"],
+["火", "か", "ひ、び", "火曜日　かようび（星期二）"],
+["花", "か、け", "はな", "花　はな（花）／花瓶　かびん（花瓶）"],
+["右", "う、ゆう", "みぎ", "右　みぎ（右邊）"],
+["読", "どく、とく", "よ・む、よ・み", "読む　よむ（讀）"],
+["友", "ゆう", "とも", "友達　ともだち（朋友）"],
+["左", "さ、しゃ", "ひだり", "左　ひだり（左邊）"],
+["休", "きゅう", "やす・む、やす・まる", "休み　やすみ（休假、休息）／休む　やすむ（休息、請假）"],
+["父", "ふ", "ちち", "父　ちち（（自己的）爸爸）／伯父　おじさん（伯伯、叔叔）"],
+["駅", "えき", "—", "駅　えき（車站）"],
+["雨", "う", "あめ、あま", "雨　あめ（雨）"],
+["飲", "いん、おん", "の・む、の・み", "飲む　のむ（喝）／飲み物　のみもの（飲料）"],
+["魚", "ぎょ", "うお、さかな", "魚　さかな（魚）"],
+["耳", "じ", "みみ", "耳　みみ（耳朵）"]
+];
+
+var NUMTBL="<p class='sec-t'>數字與時間的讀法（★＝特殊讀法，要背）</p><div class='kex2'><b>〜時</b>：一時 いちじ｜二時 にじ｜三時 さんじ｜四時 よじ★｜五時 ごじ｜六時 ろくじ｜七時 しちじ★｜八時 はちじ｜九時 くじ★｜十時 じゅうじ｜十一時 じゅういちじ｜十二時 じゅうにじ<br><b>〜分</b>：一分 いっぷん★｜二分 にふん｜三分 さんぷん★｜四分 よんぷん★｜五分 ごふん｜六分 ろっぷん★｜七分 ななふん｜八分 はっぷん★｜九分 きゅうふん｜十分 じゅっぷん★<br><b>〜月</b>：一月 いちがつ｜二月 にがつ｜三月 さんがつ｜四月 しがつ★｜五月 ごがつ｜六月 ろくがつ｜七月 しちがつ★｜八月 はちがつ｜九月 くがつ★｜十月 じゅうがつ｜十一月 じゅういちがつ｜十二月 じゅうにがつ<br><b>〜日</b>：一日 ついたち★｜二日 ふつか★｜三日 みっか★｜四日 よっか★｜五日 いつか★｜六日 むいか★｜七日 なのか★｜八日 ようか★｜九日 ここのか★｜十日 とおか★｜十四日 じゅうよっか★｜二十日 はつか★｜二十四日 にじゅうよっか★｜其他＝數字＋にち<br><b>〜人</b>：一人 ひとり★｜二人 ふたり★｜三人 さんにん｜四人 よにん★｜之後＝數字＋にん<br><b>〜つ</b>：一つ ひとつ｜二つ ふたつ｜三つ みっつ｜四つ よっつ｜五つ いつつ｜六つ むっつ｜七つ ななつ｜八つ やっつ｜九つ ここのつ｜十 とお<br><b>〜個</b>：いっこ★｜にこ｜さんこ｜よんこ｜ごこ｜ろっこ★｜ななこ｜はっこ★｜きゅうこ｜じゅっこ★<br><b>〜本</b>：いっぽん★｜にほん｜さんぼん★｜よんほん｜ごほん｜ろっぽん★｜ななほん｜はっぽん★｜きゅうほん｜じゅっぽん★<br><b>〜匹</b>：いっぴき★｜にひき｜さんびき★｜よんひき｜ごひき｜ろっぴき★｜ななひき｜はっぴき★｜きゅうひき｜じゅっぴき★<br><b>〜杯</b>：いっぱい★｜にはい｜さんばい★｜よんはい｜ごはい｜ろっぱい★｜ななはい｜はっぱい★｜きゅうはい｜じゅっぱい★<br><b>〜回</b>：いっかい★｜にかい｜さんかい｜よんかい｜ごかい｜ろっかい★｜ななかい｜はっかい★｜きゅうかい｜じゅっかい★<br><b>〜歳</b>：いっさい★｜にさい｜さんさい｜よんさい｜ごさい｜ろくさい｜ななさい｜はっさい★｜きゅうさい｜じゅっさい★｜二十歳 はたち★<br><b>〜冊・〜週間・〜か月</b>：一（いっ）★、八（はっ）★、十（じゅっ）★會促音化：いっさつ、はっしゅうかん、じゅっかげつ；另六か月 ろっかげつ★｜其餘規則<br><b>〜枚・〜台・〜円・〜年</b>：規則讀法＝數字＋まい／だい／えん／ねん（例外：四年 よねん★）<br><b>百・千</b>：三百 さんびゃく★｜六百 ろっぴゃく★｜八百 はっぴゃく★｜三千 さんぜん★｜八千 はっせん★｜其餘規則</div>";
+function kReads(s){
+  if(s==="—")return s;
+  var a=s.split("、"),o=[];
+  for(var i=0;i<a.length;i++)o.push("<span class='krd' data-say='"+a[i].replace(/・/g,"")+"'>"+a[i]+"</span>");
+  return o.join("、");
+}
+function renderKanji(){
+  var h="<div class='rowline'><span class='score'>共 "+KANJI.length+" 字（通行 N5 漢字範圍）</span></div><div class='card' id='kjWrap'>";
+  for(var i=0;i<KANJI.length;i++){
+    var k=KANJI[i];
+    h+="<div class='krow'>"+
+      "<div class='kchar'>"+k[0]+"</div>"+
+      "<div class='kinfo'>"+
+        "<p class='kread'>音　"+kReads(k[1])+"<span class='ksep'>｜</span>訓　"+kReads(k[2])+"</p>"+
+        (k[3]?"<p class='kex'>"+k[3]+"</p>":"")+
+      "</div>"+
+    "</div>";
+  }
+  h+=NUMTBL;
+  h+="</div>";
+  view.innerHTML=h;
+  document.getElementById("kjWrap").onclick=function(e){
+    var t=e.target;
+    if(t&&t.className==="krd")speak(t.getAttribute("data-say"),false);
+  };
+}
+
+/* ---------- 文法學習 ---------- */
+var GRZH=["我是田中。", "那不是我的傘。", "請問您叫什麼名字？", "這是日語的書。", "我是學生。他也是學生。", "這是什麼？——那是相機。", "那位（遠處的）人是老師。", "不好意思，廁所在哪裡？", "昨天看了電影。", "每天早上七點起床。", "桌上有書。", "明天要和朋友見面。", "在圖書館唸書。", "用筷子吃飯。", "下星期要去大阪。", "和弟弟一起去了公園。", "銀行從九點到三點。", "中國比日本大。", "比起紅茶，我更喜歡咖啡。", "班上誰最高？", "房間裡有貓。", "不好意思，請給我三張郵票。", "這道菜不太好吃。", "昨天非常熱。", "這個城鎮又安靜又漂亮。", "我知道一家又便宜又好吃的店。", "田中先生是親切的人。", "天氣變好了。", "我喜歡狗。", "我想要新的腳踏車。", "我想去日本。", "累了呢。稍微休息一下吧。", "方便的話，要不要一起吃午餐？", "行李看起來很重呢。我來幫你拿吧？", "請在這裡寫名字。", "這裡是醫院，請不要抽菸。", "可以借這本字典嗎？", "美術館裡不可以拍照。", "妹妹現在正在看電視。", "姊姊住在大阪。", "洗完手之後再吃飯。", "寫完作業之後，要出去玩。", "睡覺前刷牙。", "唸書的時候，我總是聽音樂。", "我會讀漢字。", "我喜歡聽音樂。", "你爬過富士山嗎？", "星期天會看看書、看看電影。", "因為沒有時間，所以搭計程車去。", "明天大概會下雨吧。", "我覺得學日語很有趣。", "老師說：「明天要考試。」", "「已經寫作業了嗎？」「不，還沒。」", "已經吃過午餐了嗎？", "從車站到家大約要花十分鐘。", "每天早上六點左右起床。", "教室裡只有一個學生。", "冰箱裡只有一瓶果汁。", "昨天什麼都沒吃。", "口渴了。想喝點什麼。", "包包裡有筆和筆記本等等。", "不好意思，請給我水。", "不好意思，我不知道這個漢字的唸法。", "因為沒時間了，我們快點走吧。", "昨天是妹妹的生日，所以我買了蛋糕送她。", "哥哥給了我一本舊字典。", "我從哥哥那裡得到一本舊字典。", "明天要考試，所以今晚必須唸書。", "明天放假，所以不用早起。", "咖啡和紅茶，你喜歡哪一個？", "去百貨公司買鞋子。", "那是開往大阪的電車。", "每天搭公車去公司。", "一按這個按鈕，零錢就會出來。", "因為不知道路，請日本人幫我畫了地圖。", "到了日本的話，想去爬富士山。"];
+var GRRM=["watashi wa tanaka desu.", "sore wa watashi no kasa ja arimasen.", "onamae wa nan desu ka.", "kore wa nihongo no hon desu.", "watashi wa gakusei desu. kare mo gakusei desu.", "kore wa nan desu ka. -- sore wa kamera desu.", "ano hito wa sensei desu.", "sumimasen, toire wa doko desu ka.", "kinou, eiga o mimashita.", "maiasa, shichiji ni okimasu.", "tsukue no ue ni hon ga arimasu.", "ashita, tomodachi ni aimasu.", "toshokan de benkyou shimasu.", "hashi de gohan o tabemasu.", "raishuu, oosaka e ikimasu.", "otouto to issho ni kouen e ikimashita.", "ginkou wa kuji kara sanji made desu.", "chuugoku wa nihon yori ookii desu.", "koucha yori koohii no hou ga suki desu.", "kurasu de dare ga ichiban se ga takai desu ka.", "heya ni neko ga imasu.", "sumimasen, kitte o sanmai kudasai.", "kono ryouri wa amari oishikunai desu.", "kinou wa totemo atsukatta desu.", "kono machi wa shizuka de, kirei desu.", "yasukute oishii mise o shitte imasu.", "tanaka san wa shinsetsu na hito desu.", "tenki ga yoku narimashita.", "watashi wa inu ga suki desu.", "atarashii jitensha ga hoshii desu.", "nihon e ikitai desu.", "tsukaremashita ne. sukoshi yasumimashou.", "yokattara, issho ni hirugohan o tabemasen ka.", "nimotsu ga omosou desu ne. mochimashou ka.", "koko ni namae o kaite kudasai.", "byouin desu kara, koko de tabako o suwanaide kudasai.", "kono jisho o karite mo ii desu ka.", "bijutsukan no naka de wa, shashin o totte wa ikemasen.", "imouto wa ima, terebi o mite imasu.", "ane wa oosaka ni sunde imasu.", "te o aratte kara, gohan o tabemasu.", "shukudai o shita ato de, asobi ni ikimasu.", "neru mae ni, ha o migakimasu.", "benkyou suru toki, itsumo ongaku o kikimasu.", "watashi wa kanji o yomu koto ga dekimasu.", "ongaku o kiku no ga suki desu.", "fujisan ni nobotta koto ga arimasu ka.", "nichiyoubi wa, hon o yondari, eiga o mitari shimasu.", "jikan ga arimasen kara, takushii de ikimasu.", "ashita wa tabun ame deshou.", "nihongo no benkyou wa omoshiroi to omoimasu.", "sensei wa \"ashita tesuto o shimasu\" to iimashita.", "\"mou shukudai o shimashita ka.\" \"iie, mada desu.\"", "mou hirugohan o tabemashita ka.", "eki kara ie made juppun gurai kakarimasu.", "maiasa rokuji goro ni okimasu.", "kyoushitsu ni gakusei ga hitori shika imasen.", "reizouko ni juusu ga ippon dake arimasu.", "kinou wa nani mo tabemasen deshita.", "nodo ga kawakimashita. nanika nomitai desu.", "kaban no naka ni pen ya nooto nado ga arimasu.", "sumimasen, mizu o kudasai.", "sumimasen, kono kanji no yomikata ga wakarimasen.", "jikan ga nai kara, hayaku ikimashou.", "kinou wa imouto no tanjoubi deshita kara, watashi wa keeki o katte, imouto ni agemashita.", "ani ga watashi ni furui jisho o kuremashita.", "watashi wa ani kara furui jisho o moraimashita.", "ashita wa shiken desu kara, konya wa benkyou shinakereba narimasen.", "ashita wa yasumi desu kara, hayaku okinakute mo ii desu.", "koohii to koucha to, dochira ga suki desu ka.", "depaato e kutsu o kai ni ikimasu.", "are wa oosaka e iku densha desu.", "mainichi, basu de kaisha e ikimasu.", "kono botan o osu to, otsuri ga demasu.", "michi ga wakarimasen deshita kara, nihonjin ni chizu o kaite moraimashita.", "nihon e ittara, fujisan ni noboritai desu."];
+
+var GLSEC=[["基本句型",0,4],["指示詞與疑問詞",5,7],["助詞",8,19],["存在與數量",20,21],["形容詞",22,27],["希望與邀請",28,33],["て形句型",34,39],["時間與順序",40,43],["動詞句型",44,47],["原因、推測與引用",48,51],["副詞與其他",52,63],["授受與義務",64,68],["其他重要句型",69,72],["初級Ⅰ後段（多歸N4）",73,75]];
+function kanaOnly(t){return t.replace(/([\u4E00-\u9FFF\u3005]+)\[([^\]]+)\]/g,"$2");}
+var PRIMER="<p class='sec-t'>先修：動詞的三類</p><div class='gitem'><p class='gexp'>Ⅰ類（五段動詞）：書[か]く、飲[の]む、買[か]う、話[はな]す、聞[き]く等。<br>Ⅱ類（一段動詞）：〜る，且る前是い段或え段音…食[た]べる、見[み]る、起[お]きる、寝[ね]る。<br>Ⅲ類（不規則）：する、来[く]る。</p></div><p class='sec-t'>先修：ます形與敬體四態</p><div class='gitem'><p class='gexp'>Ⅰ類：字尾う段→い段＋ます（書く→書きます、飲む→飲みます）。<br>Ⅱ類：去る＋ます（食べる→食べます）。<br>Ⅲ類：する→します、来る→来[き]ます。<br>敬體四態：〜ます（現在）／〜ません（否定）／〜ました（過去）／〜ませんでした（過去否定）。</p></div><p class='sec-t'>先修：て形（很多句型都靠它）</p><div class='gitem'><p class='gexp'>Ⅰ類：く→いて（書いて）｜ぐ→いで（泳[およ]いで）｜う・つ・る→って（買って、待[ま]って、乗[の]って）｜む・ぶ・ぬ→んで（飲んで、遊[あそ]んで、死[し]んで）｜す→して（話して）｜例外：行[い]く→行って。<br>Ⅱ類：去る＋て（食べて）。<br>Ⅲ類：して、来[き]て。<br>た形：把て形的「て／で」換成「た／だ」（書いて→書いた、飲んで→飲んだ）。</p></div><p class='sec-t'>先修：ない形</p><div class='gitem'><p class='gexp'>Ⅰ類：う段→あ段＋ない（飲む→飲まない）；字尾「う」→わない（買う→買わない）。<br>Ⅱ類：去る＋ない（食べない）。<br>Ⅲ類：しない、来[こ]ない。</p></div><p class='sec-t'>先修：形容詞變化</p><div class='gitem'><p class='gexp'>い形容詞：高[たか]い／高くない／高かった／高くなかった；連接：高くて；修飾動詞：早[はや]く行く；特殊：いい→よくない、よかった、よく。<br>な形容詞：静[しず]かです／静かじゃありません／静かでした／静かじゃありませんでした；接名詞加な（静かな町[まち]）；連接：静かで。</p></div>";
+function renderGLearn(){
+  var h="<div class='card'><p class='scene'>共 "+GR.length+" 個文法點（含 3 個銜接 N4 的初級Ⅰ句型），由淺入深。每點附例句、假名與中文翻譯；學完可到「文法測驗」練習，題目就是從這些文法點出的。</p>"+rubyJP(PRIMER);
+  for(var s=0;s<GLSEC.length;s++){
+    h+="<p class='sec-t'>"+GLSEC[s][0]+"</p>";
+    for(var i=GLSEC[s][1];i<=GLSEC[s][2];i++){
+      var g=GR[i],c=g[5].indexOf("："),title=g[5].slice(0,c),expl=g[5].slice(c+1);
+      var filled=g[0].replace("（　）",g[1]);
+      h+="<div class='gitem'>"+
+        "<p class='gt'><span class='gnum'>"+(i+1)+".</span><b>"+title+"</b></p>"+
+        "<p class='gexp'>"+expl+"</p>"+
+        "<p class='jp gsm'>"+rubyJP(filled)+"</p>"+
+        "<p class='zh gsm2'>"+GRZH[i]+"</p>"+
+        "<button class='btn mini gplay' data-k='"+i+"'>▶ 朗讀</button>"+
+      "</div>";
+    }
+  }
+  h+="</div>";
+  view.innerHTML=h;
+  var bs=view.querySelectorAll(".gplay");
+  for(var b=0;b<bs.length;b++){
+    bs[b].onclick=function(){
+      var g=GR[parseInt(this.getAttribute("data-k"),10)];
+      speak(kanaOnly(g[0].replace("（　）",g[1])),false);
+    };
+  }
+}
+
+/* ---------- 文法例句 ---------- */
+var GS=[
+["私[わたし]は日本語[にほんご]の先生[せんせい]じゃありません。学生[がくせい]です。","Watashi wa nihongo no sensei ja arimasen. Gakusei desu.","我不是日語老師，是學生。",[1,4,2]],
+["「これは何[なん]ですか。」「それは私[わたし]の傘[かさ]です。あれも私[わたし]のです。」","\"Kore wa nan desu ka.\" \"Sore wa watashi no kasa desu. Are mo watashi no desu.\"","「這是什麼？」「那是我的傘。那個也是我的。」",[6,3,5]],
+["すみません、あの白[しろ]い建物[たてもの]はどこですか。","Sumimasen, ano shiroi tatemono wa doko desu ka.","不好意思，那棟白色的建築物在哪裡？",[7,8]],
+["朝[あさ]ご飯[はん]は、パンや卵[たまご]などを食[た]べます。それから、七時[しちじ]に図書館[としょかん]で日本語[にほんご]を勉強[べんきょう]します。","Asagohan wa, pan ya tamago nado o tabemasu. Sorekara, shichiji ni toshokan de nihongo o benkyou shimasu.","早餐吃麵包和蛋之類的。然後七點在圖書館唸日語。",[61,10,13,9]],
+["明日[あした]、弟[おとうと]と一緒[いっしょ]にバスで大阪[おおさか]へ行[い]きます。","Ashita, otouto to issho ni basu de Oosaka e ikimasu.","明天和弟弟一起搭公車去大阪。",[16,73,15]],
+["駅[えき]から学校[がっこう]まで、歩[ある]いて十分[じゅっぷん]ぐらいかかります。","Eki kara gakkou made, aruite juppun gurai kakarimasu.","從車站到學校，走路大約要十分鐘。",[17,55]],
+["机[つくえ]の上[うえ]にりんごが三[みっ]つあります。いすの下[した]に猫[ねこ]がいます。","Tsukue no ue ni ringo ga mittsu arimasu. Isu no shita ni neko ga imasu.","桌上有三顆蘋果。椅子下有貓。",[11,22,21]],
+["午後[ごご]、友達[ともだち]に会[あ]いに駅[えき]へ行[い]きます。","Gogo, tomodachi ni ai ni eki e ikimasu.","下午要去車站見朋友。",[12,71]],
+["すみません、スプーンをください。はしで食[た]べることができませんから。","Sumimasen, supuun o kudasai. Hashi de taberu koto ga dekimasen kara.","不好意思，請給我湯匙。因為我沒辦法用筷子吃。",[62,14,45,49]],
+["「コーヒーと紅茶[こうちゃ]と、どちらが好[す]きですか。」「紅茶[こうちゃ]のほうが好[す]きです。コーヒーより体[からだ]にいいですから。」","\"Koohii to koucha to, dochira ga suki desu ka.\" \"Koucha no hou ga suki desu. Koohii yori karada ni ii desu kara.\"","「咖啡和紅茶，你喜歡哪個？」「我比較喜歡紅茶。因為比咖啡對身體好。」",[70,29,19,18]],
+["クラスでいちばん親切[しんせつ]な人[ひと]は田中[たなか]さんです。","Kurasu de ichiban shinsetsu na hito wa Tanaka san desu.","班上最親切的人是田中先生。",[20,27]],
+["この店[みせ]は安[やす]くて、おいしいですが、あまり広[ひろ]くないです。","Kono mise wa yasukute, oishii desu ga, amari hirokunai desu.","這家店又便宜又好吃，但不太寬敞。",[26,23]],
+["昨日[きのう]は暑[あつ]かったですが、今日[きょう]は涼[すず]しくなりました。ここは静[しず]かで、いい町[まち]です。","Kinou wa atsukatta desu ga, kyou wa suzushiku narimashita. Koko wa shizuka de, ii machi desu.","昨天很熱，今天變涼了。這裡很安靜，是個好城鎮。",[24,28,25]],
+["新[あたら]しい自転車[じてんしゃ]が欲[ほ]しいです。早[はや]く買[か]いたいです。","Atarashii jitensha ga hoshii desu. Hayaku kaitai desu.","想要新的腳踏車。想快點買。",[30,31,64]],
+["「一緒[いっしょ]に昼[ひる]ご飯[はん]を食[た]べませんか。」「ええ、食[た]べましょう。じゃ、私[わたし]が飲[の]み物[もの]を買[か]いましょうか。」","\"Issho ni hirugohan o tabemasen ka.\" \"Ee, tabemashou. Ja, watashi ga nomimono o kaimashou ka.\"","「要不要一起吃午餐？」「好啊，吃吧。那我來買飲料吧？」",[33,32,34]],
+["すみません、この言葉[ことば]が分[わ]かりません。ゆっくり話[はな]してください。","Sumimasen, kono kotoba ga wakarimasen. Yukkuri hanashite kudasai.","不好意思，我不懂這個詞。請說慢一點。",[63,35]],
+["美術館[びじゅつかん]の中[なか]では、写真[しゃしん]を撮[と]ってはいけません。大[おお]きい声[こえ]で話[はな]さないでください。","Bijutsukan no naka de wa, shashin o totte wa ikemasen. Ookii koe de hanasanaide kudasai.","美術館裡不可以拍照。請不要大聲說話。",[38,36]],
+["何[なに]か飲[の]んでもいいですか。","Nanika nonde mo ii desu ka.","可以喝點什麼嗎？",[60,37]],
+["妹[いもうと]は今[いま]、テレビを見[み]ています。姉[あね]は大阪[おおさか]に住[す]んでいます。","Imouto wa ima, terebi o mite imasu. Ane wa Oosaka ni sunde imasu.","妹妹現在在看電視。姊姊住在大阪。",[39,40]],
+["手[て]を洗[あら]ってから、ご飯[はん]を食[た]べます。食[た]べたあとで、歯[は]をみがきます。","Te o aratte kara, gohan o tabemasu. Tabeta ato de, ha o migakimasu.","洗完手再吃飯。吃完之後刷牙。",[41,42]],
+["寝[ね]る前[まえ]に、少[すこ]し本[ほん]を読[よ]みます。疲[つか]れたとき、早[はや]く寝[ね]ます。","Neru mae ni, sukoshi hon o yomimasu. Tsukareta toki, hayaku nemasu.","睡前讀一點書。累的時候就早點睡。",[43,44]],
+["音楽[おんがく]を聞[き]くのが好[す]きです。日曜日[にちようび]は、歌[うた]を歌[うた]ったり、ギターを弾[ひ]いたりします。","Ongaku o kiku no ga suki desu. Nichiyoubi wa, uta o utattari, gitaa o hiitari shimasu.","我喜歡聽音樂。星期天會唱唱歌、彈彈吉他。",[46,48]],
+["「日本[にほん]へ行[い]ったことがありますか。」「いいえ、まだです。」","\"Nihon e itta koto ga arimasu ka.\" \"Iie, mada desu.\"","「你去過日本嗎？」「不，還沒。」",[47,53]],
+["明日[あした]は雨[あめ]でしょう。でも、午後[ごご]は晴[は]れると思[おも]います。","Ashita wa ame deshou. Demo, gogo wa hareru to omoimasu.","明天大概會下雨吧。不過我覺得下午會放晴。",[50,51]],
+["先生[せんせい]は「もう宿題[しゅくだい]をしましたか」と言[い]いました。","Sensei wa \"mou shukudai o shimashita ka\" to iimashita.","老師說：「已經寫作業了嗎？」",[52,54]],
+["昨日[きのう]の夜[よる]は何[なに]も食[た]べませんでした。十一時[じゅういちじ]ごろに寝[ね]ました。","Kinou no yoru wa nani mo tabemasen deshita. Juuichiji goro ni nemashita.","昨晚什麼都沒吃。十一點左右就睡了。",[59,56]],
+["かばんの中[なか]にペンが一本[いっぽん]しかありません。ノートは一冊[いっさつ]だけあります。","Kaban no naka ni pen ga ippon shika arimasen. Nooto wa issatsu dake arimasu.","包包裡只有一枝筆。筆記本只有一本。",[57,58]],
+["母[はは]の誕生日[たんじょうび]に花[はな]をあげました。兄[あに]は私[わたし]に辞書[じしょ]をくれました。私[わたし]は友達[ともだち]にお菓子[かし]をもらいました。","Haha no tanjoubi ni hana o agemashita. Ani wa watashi ni jisho o kuremashita. Watashi wa tomodachi ni okashi o moraimashita.","媽媽生日時我送了花。哥哥給了我字典。我從朋友那裡收到點心。",[65,66,67]],
+["明日[あした]は試験[しけん]ですから、勉強[べんきょう]しなければなりません。でも、日曜日[にちようび]は学校[がっこう]へ行[い]かなくてもいいです。","Ashita wa shiken desu kara, benkyou shinakereba narimasen. Demo, nichiyoubi wa gakkou e ikanakute mo ii desu.","明天要考試，所以必須唸書。不過星期天不用去學校。",[68,69]],
+["あれは東京[とうきょう]へ行[い]く電車[でんしゃ]です。","Are wa Toukyou e iku densha desu.","那是開往東京的電車。",[72]]
+];
+var gsCur=0;
+function renderGSent(){
+  var it=GS[gsCur];
+  var tags="";
+  for(var t=0;t<it[3].length;t++){
+    var n=it[3][t],e=GR[n-1][5];
+    tags+="<p class='gp'><b>"+n+"｜"+e.slice(0,e.indexOf("："))+"</b>"+e.slice(e.indexOf("：")+1)+"</p>";
+  }
+  view.innerHTML="<div class='rowline'><span class='score'>"+GS.length+" 句涵蓋 73 個 N5 文法點（3 個 N4 銜接句型不在內）</span></div>"+
+  "<div class='card'>"+
+    "<div class='tools'>"+
+      "<button class='btn primary' id='gsPlay'>▶ 朗讀</button>"+
+      "<button class='btn' id='gsSlow'>慢速</button>"+
+      "<span class='sp'></span>"+
+      "<button class='btn' id='gsRand'>隨機</button>"+
+    "</div>"+
+    "<p class='jp'>"+rubyJP(it[0])+"</p>"+
+    "<p class='romaji'>"+it[1]+"</p>"+
+    "<p class='zh'>"+it[2]+"</p>"+
+    "<p class='sec-t'>本句涵蓋的文法點</p>"+tags+
+    "<div class='navr'>"+
+      "<button class='btn' id='gsPrev'>‹ 上一句</button>"+
+      "<span class='pos'>第 "+(gsCur+1)+"／"+GS.length+" 句</span>"+
+      "<button class='btn' id='gsNext'>下一句 ›</button>"+
+    "</div>"+
+  "</div>";
+  document.getElementById("gsPlay").onclick=function(){speak(kanaOnly(it[0]),false);};
+  document.getElementById("gsSlow").onclick=function(){speak(kanaOnly(it[0]),true);};
+  document.getElementById("gsRand").onclick=function(){var r;do{r=Math.floor(Math.random()*GS.length);}while(r===gsCur&&GS.length>1);gsCur=r;renderGSent();};
+  document.getElementById("gsPrev").onclick=function(){gsCur=(gsCur-1+GS.length)%GS.length;renderGSent();};
+  document.getElementById("gsNext").onclick=function(){gsCur=(gsCur+1)%GS.length;renderGSent();};
+}
+
+/* ---------- 單字本 ---------- */
+var VBIDX=null,Vb={q:"",row:"all"};
+var VBROWS=["あ","か","さ","た","な","は","ま","や","ら","わ"];
+function vbRowOf(kana){
+  var c=kana.charAt(0),cc=c.charCodeAt(0);
+  if(cc>=0x30A1&&cc<=0x30F6)c=String.fromCharCode(cc-0x60);
+  var base={"が":"か","ぎ":"き","ぐ":"く","げ":"け","ご":"こ","ざ":"さ","じ":"し","ず":"す","ぜ":"せ","ぞ":"そ","だ":"た","ぢ":"ち","づ":"つ","で":"て","ど":"と","ば":"は","び":"ひ","ぶ":"ふ","べ":"へ","ぼ":"ほ","ぱ":"は","ぴ":"ひ","ぷ":"ふ","ぺ":"へ","ぽ":"ほ"}[c]||c;
+  var rows={"あ":"あ","い":"あ","う":"あ","え":"あ","お":"あ","か":"か","き":"か","く":"か","け":"か","こ":"か","さ":"さ","し":"さ","す":"さ","せ":"さ","そ":"さ","た":"た","ち":"た","つ":"た","て":"た","と":"た","な":"な","に":"な","ぬ":"な","ね":"な","の":"な","は":"は","ひ":"は","ふ":"は","へ":"は","ほ":"は","ま":"ま","み":"ま","む":"ま","め":"ま","も":"ま","や":"や","ゆ":"や","よ":"や","ら":"ら","り":"ら","る":"ら","れ":"ら","ろ":"ら","わ":"わ","を":"わ","ん":"わ"};
+  return rows[base]||"あ";
+}
+function vbInit(){
+  if(VBIDX)return;
+  VBIDX=rng(VOCAB.length);
+  VBIDX.sort(function(a,b){return VOCAB[a][1].localeCompare(VOCAB[b][1],"ja");});
+}
+function vbListHTML(){
+  var q=Vb.q.toLowerCase(),h="",lastRow="",cnt=0;
+  for(var x=0;x<VBIDX.length;x++){
+    var i=VBIDX[x],v=VOCAB[i];
+    var row=vbRowOf(v[1]);
+    if(Vb.row!=="all"&&row!==Vb.row)continue;
+    if(q&&(v[0]+v[1]+v[2]+v[3]).toLowerCase().indexOf(q)<0)continue;
+    if(row!==lastRow&&!q){h+="<p class='sec-t'>"+row+"行</p>";lastRow=row;}
+    cnt++;
+    h+="<div class='vrow' data-k='"+i+"'>"+
+      "<span class='vw'>"+v[0]+"</span>"+
+      "<span class='vk'>"+v[1]+"</span>"+
+      "<span class='vr'>"+v[2]+"</span>"+
+      "<span class='vz'>"+v[3]+"</span>"+
+    "</div>";
+  }
+  return "<p class='faintt' style='margin:0'>"+cnt+" 個字</p>"+h;
+}
+function renderVBook(){
+  vbInit();
+  var rows="<option value='all'"+(Vb.row==="all"?" selected":"")+">全部</option>";
+  for(var r=0;r<VBROWS.length;r++)rows+="<option value='"+VBROWS[r]+"'"+(Vb.row===VBROWS[r]?" selected":"")+">"+VBROWS[r]+"行</option>";
+  view.innerHTML="<div class='rowline'>"+
+    "<input class='inp' id='vbQ' placeholder='搜尋：漢字、假名、拼音或中文' value='"+Vb.q.replace(/'/g,"&#39;")+"'>"+
+    "<select class='sel' id='vbRow'>"+rows+"</select>"+
+  "</div><div class='card' id='vbList'>"+vbListHTML()+"</div>";
+  document.getElementById("vbQ").oninput=function(){Vb.q=this.value;document.getElementById("vbList").innerHTML=vbListHTML();};
+  document.getElementById("vbRow").onchange=function(){Vb.row=this.value;document.getElementById("vbList").innerHTML=vbListHTML();};
+  document.getElementById("vbList").onclick=function(e){
+    var t=e.target;
+    while(t&&t!==this&&!t.getAttribute("data-k"))t=t.parentNode;
+    if(t&&t!==this)speak(VOCAB[parseInt(t.getAttribute("data-k"),10)][1],false);
+  };
+}
+
+/* ---------- 漢字測驗 ---------- */
+var KW=[],HOMO={};
+(function(){
+  for(var i=0;i<VOCAB.length;i++){
+    var w=VOCAB[i][0];
+    if(w!==VOCAB[i][1]&&/[\u4E00-\u9FFF]/.test(w)){
+      KW.push(i);
+      var k=VOCAB[i][1];
+      (HOMO[k]=HOMO[k]||[]).push(i);
+    }
+  }
+})();
+var DKP=[["か","が"],["き","ぎ"],["く","ぐ"],["け","げ"],["こ","ご"],["さ","ざ"],["し","じ"],["す","ず"],["せ","ぜ"],["そ","ぞ"],["た","だ"],["ち","ぢ"],["つ","づ"],["て","で"],["と","ど"],["は","ば"],["ひ","び"],["ふ","ぶ"],["へ","べ"],["ほ","ぼ"],["は","ぱ"],["ひ","ぴ"],["ふ","ぷ"],["へ","ぺ"],["ほ","ぽ"]];
+function kMut(k){
+  var cands=[],i,d;
+  for(i=0;i<k.length;i++){
+    for(d=0;d<DKP.length;d++){
+      if(k[i]===DKP[d][0])cands.push(k.slice(0,i)+DKP[d][1]+k.slice(i+1));
+      else if(k[i]===DKP[d][1])cands.push(k.slice(0,i)+DKP[d][0]+k.slice(i+1));
+    }
+  }
+  var u=k.indexOf("う");
+  if(u>0)cands.push(k.slice(0,u)+k.slice(u+1));
+  if(k.length<=4)cands.push(k+"う");
+  var t=k.indexOf("っ");
+  if(t>=0)cands.push(k.slice(0,t)+k.slice(t+1));
+  else if(k.length>=2)cands.push(k.slice(0,1)+"っ"+k.slice(1));
+  return cands.filter(function(x){return x!==k&&x.length>0;});
+}
+var Kq={mode:0,i:-1,opts:[],ans:"",done:false,pick:"",last:-1};
+function newKQ(){
+  var seen=Kq.mode===0?kSeen:wSeen;
+  var i=pickQ(KW,seen,null,Kq.last);
+  Kq.last=i;Kq.i=i;
+  seen[i]=1;eSave(Kq.mode===0?"nikki_kSeen":"nikki_wSeen",seen);
+  var w=VOCAB[i],set={},o=[];
+  if(Kq.mode===0){
+    Kq.ans=w[1];set[w[1]]=1;
+    var cs=shuffle(kMut(w[1]));
+    for(var c=0;c<cs.length&&o.length<3;c++)if(!set[cs[c]]){set[cs[c]]=1;o.push(cs[c]);}
+    var g1=0;
+    while(o.length<3&&g1<300){g1++;var j=KW[Math.floor(Math.random()*KW.length)];var kk=VOCAB[j][1];if(!set[kk]){set[kk]=1;o.push(kk);}}
+    Kq.opts=shuffle([w[1],o[0],o[1],o[2]]);
+  }else{
+    Kq.ans=w[0];set[w[0]]=1;
+    var hs=HOMO[w[1]]||[];
+    for(var h=0;h<hs.length&&o.length<3;h++){
+      var ww=VOCAB[hs[h]][0];
+      if(ww!==w[0]&&!set[ww]){set[ww]=1;o.push(ww);}
+    }
+    var g2=0;
+    while(o.length<3&&g2<300){g2++;var j2=KW[Math.floor(Math.random()*KW.length)];var w2=VOCAB[j2][0];if(!set[w2]&&VOCAB[j2][3]!==w[3]){set[w2]=1;o.push(w2);}}
+    Kq.opts=shuffle([w[0],o[0],o[1],o[2]]);
+  }
+  Kq.done=false;Kq.pick="";renderKQuiz();
+}
+function renderKQuiz(){
+  var head="<div class='rowline'>"+
+    "<button class='btn mini"+(Kq.mode===0?" primary":"")+"' id='kM0'>漢字→讀音</button>"+
+    "<button class='btn mini"+(Kq.mode===1?" primary":"")+"' id='kM1'>讀音→漢字</button>"+
+    "<span class='grow'></span><span class='score'>可考詞 "+KW.length+" 個</span></div>";
+  var body;
+  if(Kq.i<0){
+    body="<div class='card centerc'><p>對應考卷「漢字読み」與「表記」兩種大題：<br>看漢字選正確讀音，或看假名選正確寫法。<br>錯誤選項照考試的方式設計（濁音、長音、促音陷阱）。</p><button class='btn primary' id='kStart'>開始</button></div>";
+  }else{
+    var w=VOCAB[Kq.i];
+    var opts="<div class='opts'>";
+    for(var k=0;k<Kq.opts.length;k++){
+      var o=Kq.opts[k],cls="opt";
+      if(Kq.done){
+        if(o===Kq.ans)cls+=" correct";
+        else if(o===Kq.pick)cls+=" wrong";
+      }
+      opts+="<button class='"+cls+"' data-o='"+k+"'"+(Kq.done?" disabled":"")+">"+o+"</button>";
+    }
+    opts+="</div>";
+    var reveal="";
+    if(Kq.done){
+      reveal="<div class='reveal'>"+
+        "<p class='romaji' style='text-align:center'>"+w[2]+"　"+w[3]+"</p>"+
+        "<div class='tools' style='margin-top:8px'>"+
+          "<button class='btn' id='kPlay'>▶ 朗讀</button>"+
+          "<button class='btn' id='kSlow'>慢速</button>"+
+          "<span class='sp'></span>"+
+          "<button class='btn primary' id='kNext'>下一題 ›</button>"+
+        "</div>"+
+      "</div>";
+    }
+    body="<div class='card'><p class='qword'>"+(Kq.mode===0?w[0]:w[1])+"</p>"+opts+reveal+"</div>";
+  }
+  view.innerHTML=head+body;
+  document.getElementById("kM0").onclick=function(){if(Kq.mode!==0){Kq.mode=0;if(Kq.i!==-1)newKQ();else renderKQuiz();}};
+  document.getElementById("kM1").onclick=function(){if(Kq.mode!==1){Kq.mode=1;if(Kq.i!==-1)newKQ();else renderKQuiz();}};
+  var st=document.getElementById("kStart");
+  if(st)st.onclick=newKQ;
+  var pl=document.getElementById("kPlay");
+  if(pl)pl.onclick=function(){speak(VOCAB[Kq.i][1],false);};
+  var sl=document.getElementById("kSlow");
+  if(sl)sl.onclick=function(){speak(VOCAB[Kq.i][1],true);};
+  var nx=document.getElementById("kNext");
+  if(nx)nx.onclick=newKQ;
+  if(Kq.i>=0&&!Kq.done){
+    var obs=view.querySelectorAll(".opt");
+    for(var b=0;b<obs.length;b++){
+      obs[b].onclick=function(){
+        Kq.pick=Kq.opts[parseInt(this.getAttribute("data-o"),10)];
+        Kq.done=true;renderKQuiz();
+      };
+    }
+  }
+}
+
+/* ---------- 聽力測驗 ---------- */
+var NJI=["","いちじ","にじ","さんじ","よじ","ごじ","ろくじ","しちじ","はちじ","くじ","じゅうじ","じゅういちじ","じゅうにじ"];
+var NFUN={5:"ごふん",10:"じゅっぷん",15:"じゅうごふん",20:"にじゅっぷん",30:"さんじゅっぷん",40:"よんじゅっぷん",45:"よんじゅうごふん",50:"ごじゅっぷん"};
+var NGATSU=["","いちがつ","にがつ","さんがつ","しがつ","ごがつ","ろくがつ","しちがつ","はちがつ","くがつ","じゅうがつ","じゅういちがつ","じゅうにがつ"];
+var NNICHI=(function(){
+  var irr={1:"ついたち",2:"ふつか",3:"みっか",4:"よっか",5:"いつか",6:"むいか",7:"なのか",8:"ようか",9:"ここのか",10:"とおか",14:"じゅうよっか",20:"はつか",24:"にじゅうよっか"};
+  var tens=["","じゅう","にじゅう","さんじゅう"],dig={1:"いち",2:"に",3:"さん",5:"ご",6:"ろく",7:"しち",8:"はち",9:"く"};
+  var a={};
+  for(var d=1;d<=31;d++){
+    if(irr[d]){a[d]=irr[d];continue;}
+    var t=Math.floor(d/10),u=d%10;
+    a[d]=tens[t]+(u?dig[u]:"")+"にち";
+  }
+  return a;
+})();
+var NHYA={1:"ひゃく",2:"にひゃく",3:"さんびゃく",4:"よんひゃく",5:"ごひゃく",6:"ろっぴゃく",7:"ななひゃく",8:"はっぴゃく",9:"きゅうひゃく"};
+var NSEN={1:"せん",2:"にせん",3:"さんぜん",4:"よんせん",5:"ごせん",6:"ろくせん",7:"ななせん",8:"はっせん",9:"きゅうせん"};
+var NJU={1:"じゅう",2:"にじゅう",3:"さんじゅう",4:"よんじゅう",5:"ごじゅう",6:"ろくじゅう",7:"ななじゅう",8:"はちじゅう",9:"きゅうじゅう"};
+var NHON={1:"いっぽん",2:"にほん",3:"さんぼん",4:"よんほん",5:"ごほん",6:"ろっぽん",7:"ななほん",8:"はっぽん",9:"きゅうほん",10:"じゅっぽん"};
+var NKO={1:"いっこ",2:"にこ",3:"さんこ",4:"よんこ",5:"ごこ",6:"ろっこ",7:"ななこ",8:"はっこ",9:"きゅうこ",10:"じゅっこ"};
+var NNIN={1:"ひとり",2:"ふたり",3:"さんにん",4:"よにん",5:"ごにん",6:"ろくにん",7:"しちにん",8:"はちにん",9:"きゅうにん",10:"じゅうにん"};
+var NHIKI={1:"いっぴき",2:"にひき",3:"さんびき",4:"よんひき",5:"ごひき",6:"ろっぴき",7:"ななひき",8:"はっぴき",9:"きゅうひき",10:"じゅっぴき"};
+function ri(n){return 1+Math.floor(Math.random()*n);}
+function genNum(){
+  var t=Math.floor(Math.random()*4),kana,disp,mk,set={},d=[];
+  if(t===0){
+    var ms=[5,10,15,20,30,40,45,50];
+    var h=ri(12),m=ms[Math.floor(Math.random()*ms.length)];
+    kana=NJI[h]+NFUN[m];
+    mk=function(hh,mm){return hh+":"+("0"+mm).slice(-2);};
+    disp=mk(h,m);set[disp]=1;
+    var g=0;
+    while(d.length<3&&g<100){
+      g++;
+      var h2=ri(12),m2=ms[Math.floor(Math.random()*ms.length)];
+      var x=mk(h2,m2);
+      if(!set[x]){set[x]=1;d.push(x);}
+    }
+  }else if(t===1){
+    var mo=ri(12),dy=ri(31);
+    kana=NGATSU[mo]+NNICHI[dy];
+    disp=mo+"月"+dy+"日";set[disp]=1;
+    if(dy===4||dy===8){
+      var alt=mo+"月"+(dy===4?8:4)+"日";
+      set[alt]=1;d.push(alt);
+    }
+    var g2=0;
+    while(d.length<3&&g2<100){
+      g2++;
+      var x2=ri(12)+"月"+ri(31)+"日";
+      if(!set[x2]){set[x2]=1;d.push(x2);}
+    }
+  }else if(t===2){
+    var s,h3,tt;
+    do{s=Math.floor(Math.random()*10);h3=Math.floor(Math.random()*10);tt=Math.floor(Math.random()*10);}while(s+h3+tt===0);
+    kana=(s?NSEN[s]:"")+(h3?NHYA[h3]:"")+(tt?NJU[tt]:"")+"えん";
+    var val=s*1000+h3*100+tt*10;
+    disp=val+"円";set[disp]=1;
+    var g3=0;
+    while(d.length<3&&g3<100){
+      g3++;
+      var s2,h4,t4;
+      do{s2=Math.floor(Math.random()*10);h4=Math.floor(Math.random()*10);t4=Math.floor(Math.random()*10);}while(s2+h4+t4===0);
+      var x3=(s2*1000+h4*100+t4*10)+"円";
+      if(!set[x3]){set[x3]=1;d.push(x3);}
+    }
+  }else{
+    var cts=[["本",NHON],["個",NKO],["人",NNIN],["匹",NHIKI]];
+    var ct=cts[Math.floor(Math.random()*cts.length)];
+    var n=ri(10);
+    kana=ct[1][n];disp=n+ct[0];set[disp]=1;
+    if(n===1||n===8){
+      var alt2=(n===1?8:1)+ct[0];
+      set[alt2]=1;d.push(alt2);
+    }
+    var g4=0;
+    while(d.length<3&&g4<100){
+      g4++;
+      var x4=ri(10)+ct[0];
+      if(!set[x4]){set[x4]=1;d.push(x4);}
+    }
+  }
+  return {kana:kana,ans:disp,opts:shuffle([disp,d[0],d[1],d[2]])};
+}
+var Ls={mode:0,i:-1,opts:null,done:false,pick:-1,pickS:"",num:null,last:-1};
+function newLQ(){
+  Ls.done=false;Ls.pick=-1;Ls.pickS="";Ls.num=null;
+  if(Ls.mode===2){
+    Ls.i=0;
+    Ls.num=genNum();
+    renderListen();
+    speak(Ls.num.kana,false);
+    return;
+  }
+  if(Ls.mode===0){
+    var i=pickQ(rng(VOCAB.length),lSeen,null,Ls.last);
+    Ls.last=i;Ls.i=i;
+    lSeen[i]=1;eSave("nikki_lSeen",lSeen);
+    var used={};used[VOCAB[i][3]]=1;
+    var cand=[],g=0;
+    while(cand.length<3&&g<900){
+      g++;
+      var j=Math.floor(Math.random()*VOCAB.length);
+      var gl=VOCAB[j][3];
+      if(!used[gl]){used[gl]=1;cand.push(j);}
+    }
+    Ls.opts=shuffle([i,cand[0],cand[1],cand[2]]);
+    renderListen();
+    speak(VOCAB[i][1],false);
+    return;
+  }
+  var i2=pickQ(rng(DATA.length),sSeen,null,Ls.last);
+  Ls.last=i2;Ls.i=i2;
+  sSeen[i2]=1;eSave("nikki_sSeen2",sSeen);
+  var used2={};used2[DATA[i2].zh]=1;
+  var cand2=[],g2=0;
+  while(cand2.length<3&&g2<600){
+    g2++;
+    var j2=Math.floor(Math.random()*DATA.length);
+    if(!used2[DATA[j2].zh]){used2[DATA[j2].zh]=1;cand2.push(j2);}
+  }
+  Ls.opts=shuffle([i2,cand2[0],cand2[1],cand2[2]]);
+  renderListen();
+  speak(DATA[i2].kana,false);
+}
+function lReplay(slow){
+  if(Ls.mode===2)speak(Ls.num.kana,slow);
+  else if(Ls.mode===0)speak(VOCAB[Ls.i][1],slow);
+  else speak(DATA[Ls.i].kana,slow);
+}
+function renderListen(){
+  var head="<div class='rowline'>"+
+    "<button class='btn mini"+(Ls.mode===0?" primary":"")+"' id='lM0'>單字</button>"+
+    "<button class='btn mini"+(Ls.mode===1?" primary":"")+"' id='lM1'>句子</button>"+
+    "<button class='btn mini"+(Ls.mode===2?" primary":"")+"' id='lM2'>數字</button>"+
+    "<span class='grow'></span></div>";
+  var body;
+  if(Ls.i<0){
+    body="<div class='card centerc'><p>只聽發音、不看文字，選出正確意思。<br>單字與句子從教材庫出題（沒聽過的優先）；<br>數字模式練時刻、日期、價格、量詞的聽辨。<br>進入後自動播放，可按重聽或慢速。</p><button class='btn primary' id='lStart'>開始</button></div>";
+  }else{
+    var opts="<div class='opts'>";
+    if(Ls.mode===2){
+      for(var k=0;k<Ls.num.opts.length;k++){
+        var o=Ls.num.opts[k],cls="opt";
+        if(Ls.done){
+          if(o===Ls.num.ans)cls+=" correct";
+          else if(o===Ls.pickS)cls+=" wrong";
+        }
+        opts+="<button class='"+cls+"' data-o='"+k+"'"+(Ls.done?" disabled":"")+">"+o+"</button>";
+      }
+    }else{
+      for(var k2=0;k2<Ls.opts.length;k2++){
+        var oid=Ls.opts[k2],cls2="opt";
+        if(Ls.done){
+          if(oid===Ls.i)cls2+=" correct";
+          else if(oid===Ls.pick)cls2+=" wrong";
+        }
+        var txt=Ls.mode===0?VOCAB[oid][3]:DATA[oid].zh;
+        opts+="<button class='"+cls2+"' data-i='"+oid+"'"+(Ls.done?" disabled":"")+">"+txt+"</button>";
+      }
+    }
+    opts+="</div>";
+    var reveal="";
+    if(Ls.done){
+      var inner;
+      if(Ls.mode===2)inner="<p class='romaji' style='text-align:center'>"+Ls.num.kana+"　"+Ls.num.ans+"</p>";
+      else if(Ls.mode===0){
+        var w=VOCAB[Ls.i];
+        inner="<p class='qword' style='font-size:1.8rem;margin:0'>"+w[0]+"</p><p class='romaji' style='text-align:center'>"+w[1]+"　"+w[2]+"</p>";
+      }else{
+        var it=DATA[Ls.i];
+        inner="<p class='jp' style='font-size:1.15rem'>"+rubyJP(it.jp)+"</p><p class='romaji'>"+it.romaji+"</p>";
+      }
+      reveal="<div class='reveal'>"+inner+
+        "<div class='tools' style='margin-top:8px'><span class='sp'></span><button class='btn primary' id='lNext'>下一題 ›</button></div>"+
+      "</div>";
+    }
+    body="<div class='card'>"+
+      "<div class='tools' style='justify-content:center'>"+
+        "<button class='btn primary' id='lPlay'>▶ 重聽</button>"+
+        "<button class='btn' id='lSlow'>慢速</button>"+
+      "</div>"+opts+reveal+"</div>";
+  }
+  view.innerHTML=head+body;
+  function sw(m){if(Ls.mode!==m){Ls.mode=m;Ls.i=-1;Ls.num=null;renderListen();}}
+  document.getElementById("lM0").onclick=function(){sw(0);};
+  document.getElementById("lM1").onclick=function(){sw(1);};
+  document.getElementById("lM2").onclick=function(){sw(2);};
+  var st=document.getElementById("lStart");
+  if(st)st.onclick=newLQ;
+  var pl=document.getElementById("lPlay");
+  if(pl)pl.onclick=function(){lReplay(false);};
+  var sl=document.getElementById("lSlow");
+  if(sl)sl.onclick=function(){lReplay(true);};
+  var nx=document.getElementById("lNext");
+  if(nx)nx.onclick=newLQ;
+  if(Ls.i>=0&&!Ls.done){
+    var obs=view.querySelectorAll(".opt");
+    for(var b=0;b<obs.length;b++){
+      obs[b].onclick=function(){
+        if(Ls.mode===2)Ls.pickS=Ls.num.opts[parseInt(this.getAttribute("data-o"),10)];
+        else Ls.pick=parseInt(this.getAttribute("data-i"),10);
+        Ls.done=true;renderListen();
+      };
+    }
+  }
+}
+
+/* ---------- 閱讀 ---------- */
+var RD=[
+["朝[あさ]の日記[にっき]","私[わたし]は毎朝[まいあさ]六時[ろくじ]に起[お]きます。朝[あさ]ご飯[はん]を食[た]べる前[まえ]に、犬[いぬ]と公園[こうえん]を散歩[さんぽ]します。それから、電車[でんしゃ]で会社[かいしゃ]へ行[い]きます。会社[かいしゃ]は九時[くじ]から五時[ごじ]までです。","我每天早上六點起床。吃早餐之前，和狗去公園散步。然後搭電車去公司。公司從九點到五點。",[
+["この人[ひと]は朝[あさ]ご飯[はん]の前[まえ]に何[なに]をしますか。","犬[いぬ]と散歩[さんぽ]します","会社[かいしゃ]へ行[い]きます","朝[あさ]ご飯[はん]を作[つく]ります","電車[でんしゃ]に乗[の]ります"],
+["会社[かいしゃ]は何時[なんじ]までですか。","五時[ごじ]まで","九時[くじ]まで","六時[ろくじ]まで","三時[さんじ]まで"]]],
+["友達[ともだち]へのメール","田中[たなか]さん、明日[あした]の午後[ごご]三時[さんじ]に、駅前[えきまえ]の喫茶店[きっさてん]で会[あ]いませんか。私[わたし]は少[すこ]し早[はや]く行[い]って、本[ほん]を読[よ]んでいます。だめだったら、電話[でんわ]をください。","田中先生，明天下午三點，要不要在車站前的咖啡廳見面？我會早一點到，在那裡看書。不行的話，請打電話給我。",[
+["二人[ふたり]はどこで会[あ]いますか。","駅前[えきまえ]の喫茶店[きっさてん]","駅[えき]の中[なか]","田中[たなか]さんの家[いえ]","会社[かいしゃ]"],
+["だめなとき、何[なに]をしますか。","電話[でんわ]をします","メールを書[か]きます","喫茶店[きっさてん]へ行[い]きます","本[ほん]を読[よ]みます"]]],
+["図書館[としょかん]のお知[し]らせ","図書館[としょかん]は火曜日[かようび]から日曜日[にちようび]、午前[ごぜん]九時[くじ]から午後[ごご]六時[ろくじ]まで開[あ]いています。月曜日[げつようび]は休[やす]みです。本[ほん]は一人[ひとり]五冊[ごさつ]まで、二週間[にしゅうかん]借[か]りることができます。","圖書館週二到週日、上午九點到下午六點開放。週一休館。每人最多可借五本書，借期兩週。",[
+["図書館[としょかん]が休[やす]みなのは何曜日[なんようび]ですか。","月曜日[げつようび]","火曜日[かようび]","日曜日[にちようび]","土曜日[どようび]"],
+["本[ほん]は何冊[なんさつ]まで借[か]りることができますか。","五冊[ごさつ]","二冊[にさつ]","六冊[ろくさつ]","十冊[じゅっさつ]"]]],
+["母[はは]のプレゼント","昨日[きのう]、デパートへ買[か]い物[もの]に行[い]きました。母[はは]の誕生日[たんじょうび]のプレゼントを買[か]いたかったですが、いい物[もの]がありませんでした。それで、駅[えき]の近[ちか]くの花屋[はなや]で、きれいな花[はな]を買[か]いました。母[はは]は「ありがとう」と言[い]いました。","昨天去百貨公司買東西。想買媽媽的生日禮物，但沒有好的東西。所以在車站附近的花店買了漂亮的花。媽媽說了「謝謝」。",[
+["この人[ひと]はどこで花[はな]を買[か]いましたか。","駅[えき]の近[ちか]くの花屋[はなや]","デパート","駅[えき]の中[なか]","母[はは]の家[いえ]"],
+["どうしてデパートで買[か]いませんでしたか。","いい物[もの]がなかったから","高[たか]かったから","休[やす]みだったから","遠[とお]かったから"]]],
+["週末[しゅうまつ]の予定[よてい]","今週[こんしゅう]の土曜日[どようび]、友達[ともだち]と海[うみ]へ行[い]きます。朝[あさ]八時[はちじ]に駅[えき]で会[あ]って、電車[でんしゃ]で行[い]きます。海[うみ]で泳[およ]いだり、写真[しゃしん]を撮[と]ったりしたいです。日曜日[にちようび]は家[いえ]でゆっくり休[やす]みます。","這週六要和朋友去海邊。早上八點在車站碰面，搭電車去。想在海邊游游泳、拍拍照。週日在家好好休息。",[
+["土曜日[どようび]、何時[なんじ]にどこで会[あ]いますか。","八時[はちじ]に駅[えき]で","八時[はちじ]に海[うみ]で","九時[くじ]に駅[えき]で","八時[はちじ]に家[いえ]で"],
+["日曜日[にちようび]は何[なに]をしますか。","家[いえ]で休[やす]みます","海[うみ]へ行[い]きます","写真[しゃしん]を撮[と]ります","友達[ともだち]と会[あ]います"]]],
+["私[わたし]の家族[かぞく]","私[わたし]の家族[かぞく]は四人[よにん]です。父[ちち]と母[はは]と姉[あね]と私[わたし]です。父[ちち]は銀行[ぎんこう]で働[はたら]いています。母[はは]は料理[りょうり]が上手[じょうず]で、私[わたし]は母[はは]のカレーがいちばん好[す]きです。姉[あね]は大学[だいがく]で英語[えいご]を勉強[べんきょう]しています。","我家有四個人：爸爸、媽媽、姊姊和我。爸爸在銀行工作。媽媽很會做菜，我最喜歡媽媽的咖哩。姊姊在大學唸英文。",[
+["家族[かぞく]は何人[なんにん]ですか。","四人[よにん]","三人[さんにん]","五人[ごにん]","二人[ふたり]"],
+["姉[あね]は何[なに]をしていますか。","大学[だいがく]で英語[えいご]を勉強[べんきょう]しています","銀行[ぎんこう]で働[はたら]いています","料理[りょうり]を教[おし]えています","カレーを作[つく]っています"]]]
+];
+var Rd={p:0,show:false,ord:{},ans:{}};
+function renderReading(){
+  var P=RD[Rd.p];
+  var head="<div class='rowline'>"+
+    "<button class='btn mini' id='rdPrev'>‹ 上一篇</button>"+
+    "<span class='score'>第 "+(Rd.p+1)+"／"+RD.length+" 篇</span>"+
+    "<button class='btn mini' id='rdNext'>下一篇 ›</button>"+
+    "<button class='btn mini' id='rdRand'>隨機</button>"+
+    "<span class='grow'></span></div>";
+  var qh="";
+  for(var j=0;j<P[3].length;j++){
+    var q=P[3][j],key=Rd.p+"_"+j;
+    if(!Rd.ord[key])Rd.ord[key]=shuffle([q[1],q[2],q[3],q[4]]);
+    var picked=Rd.ans[key];
+    qh+="<p class='gt' style='margin-top:16px'><b>問"+(j+1)+"．</b>"+rubyJP(q[0])+"</p><div class='opts'>";
+    for(var k=0;k<4;k++){
+      var o=Rd.ord[key][k],cls="opt";
+      if(picked!==undefined){
+        if(o===q[1])cls+=" correct";
+        else if(o===picked)cls+=" wrong";
+      }
+      qh+="<button class='"+cls+"' data-key='"+key+"' data-k='"+k+"'"+(picked!==undefined?" disabled":"")+">"+rubyJP(o)+"</button>";
+    }
+    qh+="</div>";
+  }
+  var body="<div class='card'>"+
+    "<p class='sec-t'>"+P[0]+"</p>"+
+    "<p class='jp' style='font-size:1.12rem;line-height:2.2'>"+rubyJP(P[1])+"</p>"+
+    "<div class='tools'>"+
+      "<button class='btn' id='rdPlay'>▶ 朗讀</button>"+
+      "<button class='btn' id='rdSlow'>慢速</button>"+
+      "<span class='sp'></span>"+
+      "<button class='btn"+(Rd.show?" primary":"")+"' id='rdZh'>顯示翻譯</button>"+
+    "</div>"+
+    (Rd.show?"<div class='scene'>"+P[2]+"</div>":"")+
+    qh+
+  "</div>";
+  view.innerHTML=head+body;
+  function go(np){Rd.p=np;Rd.show=false;renderReading();}
+  document.getElementById("rdPrev").onclick=function(){go((Rd.p-1+RD.length)%RD.length);};
+  document.getElementById("rdNext").onclick=function(){go((Rd.p+1)%RD.length);};
+  document.getElementById("rdRand").onclick=function(){var r;do{r=Math.floor(Math.random()*RD.length);}while(r===Rd.p&&RD.length>1);go(r);};
+  document.getElementById("rdPlay").onclick=function(){speak(kanaOnly(P[1]),false);};
+  document.getElementById("rdSlow").onclick=function(){speak(kanaOnly(P[1]),true);};
+  document.getElementById("rdZh").onclick=function(){Rd.show=!Rd.show;renderReading();};
+  var obs=view.querySelectorAll(".opt");
+  for(var b=0;b<obs.length;b++){
+    obs[b].onclick=function(){
+      var key=this.getAttribute("data-key");
+      Rd.ans[key]=Rd.ord[key][parseInt(this.getAttribute("data-k"),10)];
+      renderReading();
+    };
+  }
+}
+
+/* ---------- 五十音 ---------- */
+var Ks={mode:"chart",script:"hira",set:"sei",q:null,opts:null,done:false,pick:"",right:0,total:0,lastKana:""};
+function hiraToKata(s){
+  return s.replace(/[\u3041-\u3096]/g,function(c){return String.fromCharCode(c.charCodeAt(0)+0x60);});
+}
+function kanaGroups(set){
+  if(set==="sei")return SEI;
+  if(set==="daku")return DAKU;
+  if(set==="you")return YOU;
+  return SEI.concat(DAKU,YOU);
+}
+function kanaPool(set,script){
+  var groups=kanaGroups(set),pool=[];
+  for(var i=0;i<groups.length;i++){
+    var ks=groups[i][0].split(","),rs=groups[i][1].split(",");
+    for(var j=0;j<ks.length;j++){
+      pool.push([script==="kata"?hiraToKata(ks[j]):ks[j],rs[j]]);
+    }
+  }
+  return pool;
+}
+function newKanaQ(){
+  var pool=kanaPool(Ks.set,Ks.script);
+  var q;
+  do{q=pool[Math.floor(Math.random()*pool.length)];}while(pool.length>1&&q[0]===Ks.lastKana);
+  Ks.lastKana=q[0];
+  Ks.q=q;
+  var others={},cand=[];
+  for(var i=0;i<pool.length;i++){
+    var r=pool[i][1];
+    if(r!==q[1]&&!others[r]){others[r]=1;cand.push(r);}
+  }
+  shuffle(cand);
+  Ks.opts=shuffle([q[1],cand[0],cand[1],cand[2]]);
+  Ks.done=false;Ks.pick="";
+  renderKana();
+}
+function kanaChartHTML(){
+  var secs=[["清音",SEI],["濁音・半濁音",DAKU],["拗音",YOU]];
+  var h="";
+  for(var s=0;s<secs.length;s++){
+    h+="<p class='sec-t'"+(s===0?" style='margin-top:0'":"")+">"+secs[s][0]+"</p>";
+    var groups=secs[s][1];
+    for(var i=0;i<groups.length;i++){
+      var ks=groups[i][0].split(","),rs=groups[i][1].split(",");
+      h+="<div class='krow'>";
+      for(var j=0;j<ks.length;j++){
+        var kn=Ks.script==="kata"?hiraToKata(ks[j]):ks[j];
+        h+="<button class='kcell' data-k='"+kn+"'><span class='kk'>"+kn+"</span><span class='kr'>"+rs[j]+"</span></button>";
+      }
+      h+="</div>";
+    }
+  }
+  return h;
+}
+function renderKana(){
+  var scriptBtns="<button class='mini"+(Ks.script==="hira"?" act":"")+"' data-scr='hira'>ひらがな</button>"+
+    "<button class='mini"+(Ks.script==="kata"?" act":"")+"' data-scr='kata'>カタカナ</button>";
+  var modeBtns="<button class='mini"+(Ks.mode==="chart"?" act":"")+"' data-md='chart'>一覽表</button>"+
+    "<button class='mini"+(Ks.mode==="quiz"?" act":"")+"' data-md='quiz'>測驗</button>";
+  var head,body;
+  if(Ks.mode==="chart"){
+    head="<div class='rowline'>"+modeBtns+"<span class='grow'></span>"+scriptBtns+"</div>";
+    body="<div class='card'>"+kanaChartHTML()+"<p class='score' style='margin:14px 0 0'>點任一假名可播放發音。</p></div>";
+  }else{
+    var setSel="<select id='kSet'>"+
+      "<option value='sei'"+(Ks.set==="sei"?" selected":"")+">清音</option>"+
+      "<option value='daku'"+(Ks.set==="daku"?" selected":"")+">濁音・半濁音</option>"+
+      "<option value='you'"+(Ks.set==="you"?" selected":"")+">拗音</option>"+
+      "<option value='all'"+(Ks.set==="all"?" selected":"")+">全部</option>"+
+      "</select>";
+    head="<div class='rowline'>"+modeBtns+"<span>範圍</span>"+setSel+scriptBtns+"<span class='grow'></span><span class='score'>答對 "+Ks.right+"／"+Ks.total+"</span></div>";
+    if(!Ks.q){
+      body="<div class='card centerc'><p>看假名，選出正確的羅馬拼音。<br>作答後可播放發音。</p><button class='btn primary' id='kStart'>開始</button></div>";
+    }else{
+      var opts="<div class='opts two'>";
+      for(var i=0;i<Ks.opts.length;i++){
+        var r=Ks.opts[i],cls="opt";
+        if(Ks.done){
+          if(r===Ks.q[1])cls+=" correct";
+          else if(r===Ks.pick)cls+=" wrong";
+        }
+        opts+="<button class='"+cls+"' data-r='"+r+"'"+(Ks.done?" disabled":"")+">"+r+"</button>";
+      }
+      opts+="</div>";
+      var reveal="";
+      if(Ks.done){
+        reveal="<div class='reveal'><div class='tools'>"+
+          "<button class='btn' id='kPlay'>▶ 朗讀</button>"+
+          "<button class='btn' id='kSlow'>慢速</button>"+
+          "<span class='sp'></span>"+
+          "<button class='btn primary' id='kNext'>下一題 ›</button>"+
+        "</div></div>";
+      }
+      body="<div class='card'><p class='kbig'>"+Ks.q[0]+"</p>"+opts+reveal+"</div>";
+    }
+  }
+  view.innerHTML=head+body;
+  var mds=view.querySelectorAll("[data-md]");
+  for(var a=0;a<mds.length;a++){
+    mds[a].onclick=function(){Ks.mode=this.getAttribute("data-md");renderKana();};
+  }
+  var scs=view.querySelectorAll("[data-scr]");
+  for(var b=0;b<scs.length;b++){
+    scs[b].onclick=function(){
+      Ks.script=this.getAttribute("data-scr");
+      if(Ks.mode==="quiz"){Ks.q=null;Ks.right=0;Ks.total=0;Ks.lastKana="";}
+      renderKana();
+    };
+  }
+  var cells=view.querySelectorAll(".kcell");
+  for(var c=0;c<cells.length;c++){
+    cells[c].onclick=function(){speak(this.getAttribute("data-k"),false);};
+  }
+  var ks=document.getElementById("kSet");
+  if(ks)ks.onchange=function(){Ks.set=this.value;Ks.q=null;Ks.right=0;Ks.total=0;Ks.lastKana="";renderKana();};
+  var st=document.getElementById("kStart");
+  if(st)st.onclick=newKanaQ;
+  var pl=document.getElementById("kPlay");
+  if(pl)pl.onclick=function(){speak(Ks.q[0],false);};
+  var sl=document.getElementById("kSlow");
+  if(sl)sl.onclick=function(){speak(Ks.q[0],true);};
+  var nx=document.getElementById("kNext");
+  if(nx)nx.onclick=newKanaQ;
+  if(Ks.mode==="quiz"&&Ks.q&&!Ks.done){
+    var obs=view.querySelectorAll(".opt");
+    for(var k=0;k<obs.length;k++){
+      obs[k].onclick=function(){
+        Ks.pick=this.getAttribute("data-r");
+        Ks.done=true;Ks.total++;
+        if(Ks.pick===Ks.q[1])Ks.right++;
+        renderKana();
+        speak(Ks.q[0],false);
+      };
+    }
+  }
+}
+
+/* ---------- 設定 ---------- */
+var modal=document.getElementById("modal");
+document.getElementById("gearBtn").onclick=function(){
+  document.getElementById("rateRange").value=settings.rate;
+  document.getElementById("rateVal").textContent=settings.rate.toFixed(2);
+  refreshVoices();
+  modal.classList.remove("hidden");
+};
+document.getElementById("closeModal").onclick=function(){modal.classList.add("hidden");};
+modal.onclick=function(e){if(e.target===modal)modal.classList.add("hidden");};
+document.getElementById("rateRange").oninput=function(){
+  settings.rate=parseFloat(this.value);
+  document.getElementById("rateVal").textContent=settings.rate.toFixed(2);
+  saveSettings();
+};
+document.getElementById("resetBtn").onclick=function(){
+  vErr={};gErr={};eSave("nikki_vErr",vErr);eSave("nikki_gErr",gErr);
+  toast("已清除錯題紀錄");
+  modal.classList.add("hidden");switchTab(curTab);
+};
+
+/* ---------- 啟動 ---------- */
+var tabBtns=document.querySelectorAll(".tab");
+for(var ti=0;ti<tabBtns.length;ti++){
+  tabBtns[ti].onclick=function(){switchTab(this.getAttribute("data-tab"));};
+}
+if(window.speechSynthesis){
+  refreshVoices();
+  speechSynthesis.onvoiceschanged=refreshVoices;
+}
+switchTab("learn");
+</script>
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load",function(){
+    navigator.serviceWorker.register("./sw.js").catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
