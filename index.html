@@ -488,6 +488,7 @@ function refreshVoices(){
       function sc(v){var l=v.lang.toLowerCase();return l.indexOf("tw")>=0?0:(l.indexOf("hk")>=0?1:2);}
       return sc(a)-sc(b);
     });
+    jaVoices.sort(function(a,b){return jaRank(a)-jaRank(b);});
   }catch(e){jaVoices=[];zhVoices=[];}
   updateVoiceNote();
 }
@@ -495,17 +496,70 @@ function updateVoiceNote(){
   var el=document.getElementById("voiceNote");
   if(!el)return;
   if(!window.speechSynthesis){el.textContent="此瀏覽器不支援語音合成";return;}
-  el.textContent=jaVoices.length?jaVoices[0].name+"（共 "+jaVoices.length+" 個）":"未偵測到日文語音，安裝後請重新整理";
+  el.textContent=jaVoices.length?pickJaVoice().name+"（共 "+jaVoices.length+" 個）":"未偵測到日文語音，安裝後請重新整理";
+}
+/* 語音品質排序：Natural（Edge 線上自然語音）＞Google＞Apple 系＞其他；espeak 墊底 */
+function jaRank(v){
+  var n=(v.name||"").toLowerCase(),s=5;
+  if(n.indexOf("natural")>=0)s=0;
+  else if(n.indexOf("google")>=0)s=1;
+  else if(n.indexOf("kyoko")>=0||n.indexOf("otoya")>=0||n.indexOf("hattori")>=0||n.indexOf("o-ren")>=0||n.indexOf("siri")>=0)s=2;
+  else if(n.indexOf("enhanced")>=0||n.indexOf("premium")>=0||n.indexOf("拡張")>=0)s=2;
+  if(n.indexOf("espeak")>=0)s=9;
+  return s;
+}
+function localJaVoice(){for(var i=0;i<jaVoices.length;i++)if(jaVoices[i].localService)return jaVoices[i];return null;}
+/* 離線或指定時優先本機語音，避免選到需連網的語音而無聲 */
+function pickJaVoice(preferLocal){
+  if(!jaVoices.length)return null;
+  if(preferLocal||navigator.onLine===false){var lv=localJaVoice();if(lv)return lv;}
+  return jaVoices[0];
+}
+/* 朗讀前處理：去括號註解；句尾「か。」→「か？」讓疑問句尾音上揚。
+   只轉「か。」不動裸「か」（いつか、しずか 等單字不受影響）；
+   「ああ、そうですか。」是下降語調的應答（＝是這樣啊），還原句號。 */
+function ttsJa(t){
+  t=String(t).replace(/（[^）]*）|\([^)]*\)/g,"");
+  t=t.replace(/か。/g,"か？").replace(/ああ、そうですか？/g,"ああ、そうですか。");
+  return t;
+}
+/* 逐句切分排隊：語調更穩，也避開部分瀏覽器線上語音唸長文中斷的問題 */
+function ttsSplitJa(t){
+  var m=t.match(/[^。！？]+[。！？]*[」』）]*/g),out=[],i,s;
+  if(!m)return[t];
+  for(i=0;i<m.length;i++){
+    s=m[i].replace(/^[\s　]+|[\s　]+$/g,"");
+    if(s&&/[ぁ-んァ-ヶー一-龯々]/.test(s))out.push(s);
+  }
+  return out.length?out:[t];
+}
+function makeJaUtter(text,rate){
+  var u=new SpeechSynthesisUtterance(text);
+  u.lang="ja-JP";
+  var v=pickJaVoice();
+  if(v)u.voice=v;
+  u.rate=rate;u.pitch=1;
+  u.onerror=function(ev){
+    var err=ev&&ev.error;
+    if(err==="canceled"||err==="interrupted")return;
+    var lv=localJaVoice();
+    if(!lv||lv===u.voice)return;
+    var u2=new SpeechSynthesisUtterance(text);
+    u2.lang="ja-JP";u2.voice=lv;u2.rate=rate;u2.pitch=1;
+    try{speechSynthesis.speak(u2);}catch(e){}
+  };
+  return u;
 }
 function speak(text,slow){
   if(!window.speechSynthesis){toast("此瀏覽器不支援語音");return;}
   if(Seq.playing)seqStop();
   if(!jaVoices.length)refreshVoices();
-  var u=new SpeechSynthesisUtterance(text);
-  u.lang="ja-JP";
-  if(jaVoices.length)u.voice=jaVoices[0];
-  u.rate=slow?Math.max(0.45,settings.rate*0.6):settings.rate;
-  try{speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}
+  var rate=slow?Math.max(0.45,settings.rate*0.6):settings.rate;
+  var parts=ttsSplitJa(ttsJa(text)),i;
+  try{
+    speechSynthesis.cancel();
+    for(i=0;i<parts.length;i++)speechSynthesis.speak(makeJaUtter(parts[i],rate));
+  }catch(e){}
 }
 
 /* ---------- 連續朗讀與複製 ---------- */
@@ -525,17 +579,24 @@ function seqNext(){
   if(!Seq.playing)return;
   if(Seq.pos>=Seq.items.length){seqStop();return;}
   var it=Seq.items[Seq.pos++];
-  var u=new SpeechSynthesisUtterance(it.t);
+  var u=new SpeechSynthesisUtterance(it.l==="zh"?it.t:ttsJa(it.t));
   if(it.l==="zh"){
     u.lang=zhVoices.length?zhVoices[0].lang:"zh-TW";
     if(zhVoices.length)u.voice=zhVoices[0];
   }else{
     u.lang="ja-JP";
-    if(jaVoices.length)u.voice=jaVoices[0];
+    var v=pickJaVoice(Seq.localOnly);
+    if(v)u.voice=v;
   }
-  u.rate=settings.rate;
+  u.rate=settings.rate;u.pitch=1;
   u.onend=function(){setTimeout(seqNext,140);};
-  u.onerror=function(){setTimeout(seqNext,140);};
+  u.onerror=function(ev){
+    var err=ev&&ev.error;
+    if(Seq.playing&&it.l!=="zh"&&err!=="canceled"&&err!=="interrupted"&&!Seq.localOnly&&localJaVoice()){
+      Seq.localOnly=true;Seq.pos--;/* 線上語音失敗→換本機語音重唸這一項，之後整串都用本機 */
+    }
+    setTimeout(seqNext,140);
+  };
   try{speechSynthesis.speak(u);}catch(e){seqStop();}
 }
 function seqItemsFor(id){
@@ -3766,6 +3827,7 @@ for(var ti=0;ti<tabBtns.length;ti++){
 if(window.speechSynthesis){
   refreshVoices();
   speechSynthesis.onvoiceschanged=refreshVoices;
+  try{speechSynthesis.speak(new SpeechSynthesisUtterance(""));}catch(e){}/* 預熱：避免部分桌面瀏覽器首次點播無聲 */
 }
 switchTab("learn");
 if(syncEnabled()){
