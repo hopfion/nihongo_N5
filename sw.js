@@ -1,4 +1,4 @@
-var CACHE="nikki-v11";
+var CACHE="nikki-v12";
 var ASSETS=["./","./index.html","./manifest.webmanifest","./icon-192.png","./icon-512.png","./icon-512-maskable.png","./apple-touch-icon.png"];
 self.addEventListener("install",function(e){
   e.waitUntil(caches.open(CACHE).then(function(c){

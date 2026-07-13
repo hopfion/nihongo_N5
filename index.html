@@ -335,14 +335,15 @@ button:focus-visible,select:focus-visible,.seal:focus-visible{outline:2px solid 
     </div>
     <div class="srow"><span class="lbl">朗讀語速</span><input type="range" id="rateRange" min="0.5" max="1.2" step="0.05"><span id="rateVal" class="mut"></span></div>
     <div class="srow"><span class="lbl">字體大小</span><input type="range" id="fsRange" min="0.85" max="1.4" step="0.05"><span id="fsVal" class="mut"></span></div>
-    <div class="srow"><span class="lbl">日文語音</span><span id="voiceNote" class="mut">偵測中…</span></div>
+    <div class="srow"><span class="lbl">日文語音</span><select id="voiceSel" class="sel" style="flex:1;min-width:0"></select><button id="voiceTest" class="btn mini">試聽</button></div>
+    <p class="mut" id="voiceNote" style="margin:0 14px 10px;font-size:.82rem">偵測中…</p>
     <div class="srow"><button id="resetBtn" class="btn danger">清除錯題紀錄</button><button id="checkBtn" class="btn">資料自檢</button></div>
     <div class="srow"><span class="lbl">紀錄同步</span><button id="expBtn" class="btn">匯出</button><button id="impBtn" class="btn">匯入</button></div>
     <textarea id="syncBox" class="syncbox" placeholder="匯出：按「匯出」產生代碼並自動複製，用訊息或 AirDrop 傳到另一台裝置。匯入：把對方的代碼貼在這裡，按「匯入」。"></textarea>
     <div class="srow"><span class="lbl">自動同步</span><span id="syncState" class="mut">未設定</span></div>
     <div class="srow"><input id="syncOwner" class="inp" placeholder="GitHub 使用者名稱"><input id="syncRepo" class="inp" placeholder="repo 名稱"></div>
     <div class="srow"><input id="syncToken" class="inp" type="password" placeholder="存取權杖 github_pat_…"></div>
-    <div class="srow"><button id="syncSave" class="btn primary">儲存並測試</button><button id="syncOff" class="btn">停用</button></div>
+    <div class="srow"><button id="syncSave" class="btn primary">同步</button><button id="syncOff" class="btn">停用</button></div>
   </div>
 </div>
 
@@ -493,10 +494,19 @@ function refreshVoices(){
   updateVoiceNote();
 }
 function updateVoiceNote(){
-  var el=document.getElementById("voiceNote");
+  var el=document.getElementById("voiceNote"),sel=document.getElementById("voiceSel");
   if(!el)return;
-  if(!window.speechSynthesis){el.textContent="此瀏覽器不支援語音合成";return;}
-  el.textContent=jaVoices.length?pickJaVoice().name+"（共 "+jaVoices.length+" 個）":"未偵測到日文語音，安裝後請重新整理";
+  if(!window.speechSynthesis){el.textContent="此瀏覽器不支援語音合成";if(sel)sel.style.display="none";return;}
+  if(!jaVoices.length){el.textContent="未偵測到日文語音，安裝後請重新整理";if(sel)sel.innerHTML="";return;}
+  if(sel){
+    var h="<option value=''>自動（"+jaVoices[0].name+"）</option>",i,n;
+    for(i=0;i<jaVoices.length;i++){
+      n=jaVoices[i].name;
+      h+="<option value=\""+n.replace(/"/g,"&quot;")+"\""+(settings.vja===n?" selected":"")+">"+n+"</option>";
+    }
+    sel.innerHTML=h;
+  }
+  el.textContent="現在使用："+pickJaVoice().name+"。語音的自然度取決於裝置：Edge 建議選 Natural、Chrome 選 Google 日本語；iPhone 可在系統的「朗讀內容」設定下載較高品質的日文語音。";
 }
 /* 語音品質排序：Natural（Edge 線上自然語音）＞Google＞Apple 系＞其他；espeak 墊底 */
 function jaRank(v){
@@ -509,10 +519,15 @@ function jaRank(v){
   return s;
 }
 function localJaVoice(){for(var i=0;i<jaVoices.length;i++)if(jaVoices[i].localService)return jaVoices[i];return null;}
-/* 離線或指定時優先本機語音，避免選到需連網的語音而無聲 */
+/* 離線或指定時優先本機語音，避免選到需連網的語音而無聲；設定裡選了語音就優先用 */
 function pickJaVoice(preferLocal){
   if(!jaVoices.length)return null;
-  if(preferLocal||navigator.onLine===false){var lv=localJaVoice();if(lv)return lv;}
+  var off=preferLocal||navigator.onLine===false,i,v=null;
+  if(settings.vja){
+    for(i=0;i<jaVoices.length;i++)if(jaVoices[i].name===settings.vja){v=jaVoices[i];break;}
+  }
+  if(v&&!(off&&!v.localService))return v;
+  if(off){var lv=localJaVoice();if(lv)return lv;}
   return jaVoices[0];
 }
 /* 朗讀前處理：去括號註解；句尾「か。」→「か？」讓疑問句尾音上揚。
@@ -827,7 +842,7 @@ var VOCAB=[
 ["奥さん", "おくさん", "okusan", "（別人的）太太"],
 ["お酒", "おさけ", "osake", "酒"],
 ["お皿", "おさら", "osara", "盤子"],
-["伯父", "おじさん", "ojisan", "伯伯、叔叔"],
+["伯父さん", "おじさん", "ojisan", "伯伯、叔叔"],
 ["おじいさん", "おじいさん", "ojiisan", "爺爺、老爺爺"],
 ["教える", "おしえる", "oshieru", "告訴、教"],
 ["押す", "おす", "osu", "推、按"],
@@ -1061,7 +1076,7 @@ var VOCAB=[
 ["住む", "すむ", "sumu", "居住"],
 ["する", "する", "suru", "做"],
 ["座る", "すわる", "suwaru", "坐"],
-["背", "せい", "sei", "身高、背"],
+["背", "せ", "se", "身高、背"],
 ["生徒", "せいと", "seito", "學生（中小學）"],
 ["セーター", "セーター", "seetaa", "毛衣"],
 ["石鹸", "せっけん", "sekken", "肥皂"],
@@ -1407,7 +1422,7 @@ var VOCAB=[
 ["来週", "らいしゅう", "raishuu", "下星期"],
 ["来年", "らいねん", "rainen", "明年"],
 ["ラジオ", "ラジオ", "rajio", "收音機"],
-["ラジオカセ", "ラジオカセ", "rajiokase", "收錄音機"],
+["ラジカセ", "ラジカセ", "rajikase", "收錄音機"],
 ["りっぱ", "りっぱ", "rippa", "出色、氣派"],
 ["留学生", "りゅうがくせい", "ryuugakusei", "留學生"],
 ["両親", "りょうしん", "ryoushin", "父母"],
@@ -1623,7 +1638,7 @@ var GR=[
 ["姉[あね]は大阪[おおさか]に（　）います。","住[す]んで","住[す]みて","住[す]む","住[す]んだ","て形＋います（狀態）：住む→住んで；む→んで的音便。"],
 ["手[て]を（　）から、ご飯[はん]を食[た]べます。","洗[あら]って","洗[あら]う","洗[あら]った","洗[あら]い","て形＋から：「做完A之後再B」。"],
 ["宿題[しゅくだい]を（　）あとで、遊[あそ]びに行[い]きます。","した","する","して","します","た形＋あとで：「做完～之後」；前面接た形。"],
-["寝[ね]る（　）に、歯[は]をみがきます。","前[まえ]","あと","とき","から","辭書形＋前に：「做～之前」。"],
+["寝[ね]る（　）に、歯[は]をみがきます。","前[まえ]","あと","ほう","から","辭書形＋前に：「做～之前」。"],
 ["勉強[べんきょう]する（　）、いつも音楽[おんがく]を聞[き]きます。","とき","こと","もの","ほう","〜とき：「～的時候」。"],
 ["私[わたし]は漢字[かんじ]を読[よ]むこと（　）できます。","が","を","に","で","辭書形＋ことができる：「會～、能～」；こと後面用「が」。"],
 ["音楽[おんがく]を（　）のが好[す]きです。","聞[き]く","聞[き]いて","聞[き]きます","聞[き]けば","辭書形＋の：把動作名詞化「喜歡聽音樂（這件事）」。"],
@@ -1664,15 +1679,15 @@ var GR=[
 var Gs={i:-1,opts:null,done:false,pick:"",last:-1,scope:-1,mode:0};
 var RC=[
 [["私[わたし]は","毎朝[まいあさ]","七時[しちじ]に","起[お]きます。"],"我每天早上七點起床。"],
-[["昨日[きのう]","友達[ともだち]と","映画[えいが]を","見[み]ました。"],"昨天和朋友看了電影。"],
+[["友達[ともだち]と","見[み]た","映画[えいが]は","面白[おもしろ]かったです。"],"和朋友一起看的電影很有趣。"],
 [["部屋[へや]の","机[つくえ]の上[うえ]に","猫[ねこ]が","います。"],"房間的桌上有貓。"],
 [["銀行[ぎんこう]は","九時[くじ]から","三時[さんじ]まで","です。"],"銀行從九點到三點。"],
 [["日本語[にほんご]の","勉強[べんきょう]は","面白[おもしろ]いと","思[おも]います。"],"我覺得學日語很有趣。"],
 [["雨[あめ]ですから","タクシーで","家[いえ]へ","帰[かえ]ります。"],"因為下雨，搭計程車回家。"],
-[["ここで","写真[しゃしん]を","撮[と]っては","いけません。"],"這裡不可以拍照。"],
+[["この","部屋[へや]で写真[しゃしん]を","撮[と]っては","いけません。"],"這個房間裡不可以拍照。"],
 [["ご飯[はん]を","食[た]べる前[まえ]に","手[て]を","洗[あら]います。"],"吃飯前先洗手。"],
 [["私[わたし]は","小[ちい]さい","犬[いぬ]が","好[す]きです。"],"我喜歡小狗。"],
-[["日曜日[にちようび]は","本[ほん]を読[よ]んだり","音楽[おんがく]を聞[き]いたり","します。"],"星期天會看看書、聽聽音樂。"],
+[["休[やす]みの","日[ひ]は本[ほん]を読[よ]んだり","音楽[おんがく]を聞[き]いたり","します。"],"假日會看看書、聽聽音樂。"],
 [["すみません、","水[みず]を","一杯[いっぱい]","ください。"],"不好意思，請給我一杯水。"],
 [["疲[つか]れましたから","少[すこ]し","休[やす]みたい","です。"],"因為累了，想休息一下。"],
 [["この漢字[かんじ]の","読[よ]み方[かた]を","教[おし]えて","ください。"],"請教我這個漢字的唸法。"],
@@ -1680,8 +1695,8 @@ var RC=[
 [["宿題[しゅくだい]をした","あとで","テレビを","見[み]ます。"],"寫完作業之後看電視。"],
 [["駅[えき]から","家[いえ]まで","歩[ある]いて","十分[じゅっぷん]ぐらいです。"],"從車站走到家大約十分鐘。"],
 [["来年[らいねん]","日本[にほん]へ","旅行[りょこう]に","行[い]きたいです。"],"明年想去日本旅行。"],
-[["コーヒーより","紅茶[こうちゃ]の","ほうが","好[す]きです。"],"比起咖啡更喜歡紅茶。"],
-[["教室[きょうしつ]に","学生[がくせい]が","一人[ひとり]しか","いません。"],"教室裡只有一個學生。"],
+[["コーヒー","より紅茶[こうちゃ]の","ほうが","好[す]きです。"],"比起咖啡更喜歡紅茶。"],
+[["この","教室[きょうしつ]には学生[がくせい]が","一人[ひとり]しか","いません。"],"這間教室裡只有一個學生。"],
 [["晩[ばん]ご飯[はん]を","食[た]べてから","お風呂[ふろ]に","入[はい]ります。"],"吃完晚餐後洗澡。"]
 ];
 var Rc={i:-1,seq:[],pick:[],done:false,last:-1};
@@ -1927,7 +1942,7 @@ var KANJI=[
 ["友", "ゆう", "とも", "友達　ともだち（朋友）"],
 ["左", "さ", "ひだり", "左　ひだり（左邊）"],
 ["休", "きゅう", "やす・む、やす・まる", "休み　やすみ（休假、休息）／休む　やすむ（休息、請假）"],
-["父", "ふ", "ちち", "父　ちち（（自己的）爸爸）／伯父　おじさん（伯伯、叔叔）"],
+["父", "ふ", "ちち", "父　ちち（（自己的）爸爸）／伯父さん　おじさん（伯伯、叔叔）"],
 ["駅", "えき", "—", "駅　えき（車站）"],
 ["雨", "う", "あめ、あま", "雨　あめ（雨）"],
 ["飲", "いん", "の・む、の・み", "飲む　のむ（喝）／飲み物　のみもの（飲料）"],
@@ -2889,7 +2904,7 @@ var VEX=[
 ["来週[らいしゅう]、テストがあります。","下星期有考試。"],
 ["来年[らいねん]、日本[にほん]へ行[い]きたいです。","明年想去日本。"],
 ["朝[あさ]、ラジオでニュースを聞[き]きます。","早上用收音機聽新聞。"],
-["ラジオカセで音楽[おんがく]を聞[き]きます。","用收錄音機聽音樂。"],
+["ラジカセで音楽[おんがく]を聞[き]きます。","用收錄音機聽音樂。"],
 ["これはりっぱな建物[たてもの]ですね。","這是很氣派的建築物呢。"],
 ["リーさんは中国[ちゅうごく]の留学生[りゅうがくせい]です。","李同學是中國的留學生。"],
 ["両親[りょうしん]は大阪[おおさか]に住[す]んでいます。","父母住在大阪。"],
@@ -3759,6 +3774,14 @@ document.getElementById("fsRange").oninput=function(){
   document.getElementById("fsVal").textContent=Math.round(settings.fs*100)+"%";
   applyFS();
   saveSettings();
+};
+document.getElementById("voiceSel").onchange=function(){
+  settings.vja=this.value||"";
+  saveSettings();
+  updateVoiceNote();
+};
+document.getElementById("voiceTest").onclick=function(){
+  speak("おなまえはなんですか。わたしはたなかです。",false);
 };
 document.getElementById("checkBtn").onclick=function(){
   var r=selfTest();
