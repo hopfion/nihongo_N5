@@ -475,6 +475,18 @@ function toast(msg){
 
 /* ---------- 語音 ---------- */
 var jaVoices=[],zhVoices=[];
+/* iOS／iPadOS 偵測（iPadOS 的 Safari 會偽裝成 Mac，用觸控點數辨識） */
+var IOS_LIKE=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+/* iOS 限制（Apple 官方確認）：網頁的 getVoices() 只列「預裝」語音，
+   使用者下載的高品質（進階／Enhanced）語音列不出來、也指定不到；
+   但 utterance 不綁 voice、只給 lang="ja-JP" 時，系統會改用
+   「設定→輔助使用→語音內容→聲音→日文」所選的語音（含下載的進階版 Kyoko；
+   Siri 語音例外：系統會自動換回一般語音）。
+   因此「自動」在 iOS 上不綁 voice，把選擇權交給系統設定；
+   下拉選單有明確指定、或朗讀出錯退回本機語音時，才綁 voice。 */
+function useSystemJaDefault(preferLocal){
+  return IOS_LIKE&&!settings.vja&&!preferLocal;
+}
 function refreshVoices(){
   if(!window.speechSynthesis){updateVoiceNote();return;}
   try{
@@ -498,24 +510,40 @@ function updateVoiceNote(){
   if(!el)return;
   if(!window.speechSynthesis){el.textContent="此瀏覽器不支援語音合成";if(sel)sel.style.display="none";return;}
   if(!jaVoices.length){el.textContent="未偵測到日文語音，安裝後請重新整理";if(sel)sel.innerHTML="";return;}
+  function gTag(name){
+    var t=(name||"").toLowerCase();
+    if(t.indexOf("kyoko")>=0||t.indexOf("o-ren")>=0)return "（女聲）";
+    if(t.indexOf("otoya")>=0||t.indexOf("hattori")>=0)return "（男聲）";
+    return "";
+  }
   if(sel){
-    var h="<option value=''>自動（"+jaVoices[0].name+"）</option>",i,n;
+    var autoLabel=IOS_LIKE?"自動（系統「語音內容」所選的日文語音）":"自動（"+jaVoices[0].name+"）";
+    var h="<option value=''>"+autoLabel+"</option>",i,n;
     for(i=0;i<jaVoices.length;i++){
       n=jaVoices[i].name;
-      h+="<option value=\""+n.replace(/"/g,"&quot;")+"\""+(settings.vja===n?" selected":"")+">"+n+"</option>";
+      h+="<option value=\""+n.replace(/"/g,"&quot;")+"\""+(settings.vja===n?" selected":"")+">"+n+gTag(n)+"</option>";
     }
     sel.innerHTML=h;
   }
-  el.textContent="現在使用："+pickJaVoice().name+"。語音的自然度取決於裝置：Edge 建議選 Natural、Chrome 選 Google 日本語；iPhone 可在系統的「朗讀內容」設定下載較高品質的日文語音。";
+  if(IOS_LIKE&&!settings.vja){
+    el.textContent="現在使用：系統預設日文語音。想更自然：iPhone 設定 → 輔助使用 → 語音內容 → 聲音 → 日文，下載並選取「Kyoko（進階／提高品質）」，把本 App 完全關閉重開後，保持「自動」再按試聽。注意：在系統選 Siri 語音無效（會被換回一般語音）；此下拉選單只列預裝語音，是 iOS 對網頁的限制。";
+  }else if(IOS_LIKE){
+    el.textContent="現在使用："+pickJaVoice().name+"（固定用此預裝語音）。想改用系統下載的高品質語音，請改選「自動」，並在 iPhone 設定 → 輔助使用 → 語音內容 → 聲音 → 日文 選好語音。";
+  }else{
+    el.textContent="現在使用："+pickJaVoice().name+"。語音的自然度取決於裝置：Edge 建議選 Natural、Chrome 選 Google 日本語。";
+  }
 }
-/* 語音品質排序：Natural（Edge 線上自然語音）＞Google＞Apple 系＞其他；espeak 墊底 */
+/* 語音品質排序：Natural（Edge 線上自然語音）＞Google＞Apple 系＞其他；espeak 墊底；
+   同層級中含 premium／enhanced／拡張 的高品質版優先（同時掃 name 與 voiceURI） */
 function jaRank(v){
-  var n=(v.name||"").toLowerCase(),s=5;
+  var n=((v.name||"")+" "+(v.voiceURI||"")).toLowerCase(),s=5;
   if(n.indexOf("natural")>=0)s=0;
   else if(n.indexOf("google")>=0)s=1;
   else if(n.indexOf("kyoko")>=0||n.indexOf("otoya")>=0||n.indexOf("hattori")>=0||n.indexOf("o-ren")>=0||n.indexOf("siri")>=0)s=2;
   else if(n.indexOf("enhanced")>=0||n.indexOf("premium")>=0||n.indexOf("拡張")>=0)s=2;
   if(n.indexOf("espeak")>=0)s=9;
+  s*=10;
+  if(n.indexOf("premium")>=0||n.indexOf("enhanced")>=0||n.indexOf("拡張")>=0)s-=1;
   return s;
 }
 function localJaVoice(){for(var i=0;i<jaVoices.length;i++)if(jaVoices[i].localService)return jaVoices[i];return null;}
@@ -551,8 +579,10 @@ function ttsSplitJa(t){
 function makeJaUtter(text,rate){
   var u=new SpeechSynthesisUtterance(text);
   u.lang="ja-JP";
-  var v=pickJaVoice();
-  if(v)u.voice=v;
+  if(!useSystemJaDefault()){
+    var v=pickJaVoice();
+    if(v)u.voice=v;
+  }
   u.rate=rate;u.pitch=1;
   u.onerror=function(ev){
     var err=ev&&ev.error;
@@ -600,8 +630,10 @@ function seqNext(){
     if(zhVoices.length)u.voice=zhVoices[0];
   }else{
     u.lang="ja-JP";
-    var v=pickJaVoice(Seq.localOnly);
-    if(v)u.voice=v;
+    if(!useSystemJaDefault(Seq.localOnly)){
+      var v=pickJaVoice(Seq.localOnly);
+      if(v)u.voice=v;
+    }
   }
   u.rate=settings.rate;u.pitch=1;
   u.onend=function(){setTimeout(seqNext,140);};
