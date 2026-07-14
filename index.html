@@ -595,16 +595,38 @@ function makeJaUtter(text,rate){
   };
   return u;
 }
+/* 句間停頓：舊寫法把所有句子一次塞進 speechSynthesis 佇列，iOS 連播幾乎零間隔、句子黏在一起。
+   改成逐段排隊：。！？（含收尾引號）之後停 TTS_GAP_SENT，、／，之後停 TTS_GAP_MINOR
+   （閱讀長文的換行標籤本來就轉成「、」餵入，因此段落間也吃到停頓）。
+   SpeakGen 世代碼：新的 speak／連續朗讀開始後，殘留的停頓計時器一律作廢，避免疊音。
+   不可改回「一次全塞佇列」的寫法，那會失去停頓。 */
+var TTS_GAP_SENT=600,TTS_GAP_MINOR=250,SpeakGen=0;
 function speak(text,slow){
   if(!window.speechSynthesis){toast("此瀏覽器不支援語音");return;}
   if(Seq.playing)seqStop();
   if(!jaVoices.length)refreshVoices();
   var rate=slow?Math.max(0.45,settings.rate*0.6):settings.rate;
-  var parts=ttsSplitJa(ttsJa(text)),i;
-  try{
-    speechSynthesis.cancel();
-    for(i=0;i<parts.length;i++)speechSynthesis.speak(makeJaUtter(parts[i],rate));
-  }catch(e){}
+  var sents=ttsSplitJa(ttsJa(text)),parts=[],i,j,fr,s;
+  for(i=0;i<sents.length;i++){
+    fr=sents[i].match(/[^、，]+[、，]?/g)||[sents[i]];
+    for(j=0;j<fr.length;j++){
+      s=fr[j].replace(/^[\s　]+|[\s　]+$/g,"");
+      if(s&&/[ぁ-んァ-ヶー一-龯々]/.test(s))parts.push({t:s,g:TTS_GAP_MINOR});
+    }
+    if(parts.length)parts[parts.length-1].g=TTS_GAP_SENT;
+  }
+  if(!parts.length)parts=[{t:text,g:0}];
+  var gen=++SpeakGen,k=0;
+  function step(){
+    if(gen!==SpeakGen||Seq.playing||k>=parts.length)return;
+    var p=parts[k++],u=makeJaUtter(p.t,rate),oe=u.onerror;
+    function go(){if(gen===SpeakGen&&!Seq.playing)setTimeout(step,p.g);}
+    u.onend=go;
+    u.onerror=function(ev){oe(ev);var er=ev&&ev.error;if(er!=="canceled"&&er!=="interrupted")go();};
+    try{speechSynthesis.speak(u);}catch(e){}
+  }
+  try{speechSynthesis.cancel();}catch(e){}
+  step();
 }
 
 /* ---------- 連續朗讀與複製 ---------- */
