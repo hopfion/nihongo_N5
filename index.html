@@ -259,7 +259,11 @@ table.vocab td.r{font-family:Georgia,serif;font-style:italic;color:var(--indigo)
   display:flex;align-items:center;justify-content:center;padding:20px;z-index:50;
 }
 .hidden{display:none}
-.sheet{background:var(--card);border-radius:14px;padding:20px 22px;width:100%;max-width:420px;border:1px solid var(--line)}
+body.noscroll{position:fixed;left:0;right:0;width:100%;overflow:hidden}
+.sheet{
+  background:var(--card);border-radius:14px;padding:20px 22px;width:100%;max-width:420px;border:1px solid var(--line);
+  max-height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+}
 .sheet-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .sheet-head h2{font-family:var(--jpserif);font-size:1.2rem;margin:0}
 .icon-btn{appearance:none;background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--mut)}
@@ -286,6 +290,9 @@ button:focus-visible,select:focus-visible,.seal:focus-visible{outline:2px solid 
   h1{font-size:1.4rem}
   .card{padding:16px 15px}
   .spine{font-size:.9rem;padding:10px 6px}
+  .overlay{padding:12px 12px 18px}
+  .sheet{padding:16px 14px}
+  .srow .inp{min-width:0}
 }
 </style>
 </head>
@@ -3804,6 +3811,19 @@ function selfTest(){
 
 /* ---------- 設定 ---------- */
 var modal=document.getElementById("modal");
+var modalScrollY=0;
+function modalOpen(){
+  modalScrollY=window.pageYOffset||document.documentElement.scrollTop||0;
+  document.body.style.top=(-modalScrollY)+"px";
+  document.body.classList.add("noscroll");
+  modal.classList.remove("hidden");
+}
+function modalClose(){
+  modal.classList.add("hidden");
+  document.body.classList.remove("noscroll");
+  document.body.style.top="";
+  window.scrollTo(0,modalScrollY);
+}
 document.getElementById("gearBtn").onclick=function(){
   document.getElementById("rateRange").value=settings.rate;
   document.getElementById("rateVal").textContent=settings.rate.toFixed(2);
@@ -3814,10 +3834,10 @@ document.getElementById("gearBtn").onclick=function(){
   document.getElementById("syncRepo").value=SYNC.repo||"";
   document.getElementById("syncToken").value=SYNC.token||"";
   document.getElementById("syncState").textContent=syncStateText();
-  modal.classList.remove("hidden");
+  modalOpen();
 };
-document.getElementById("closeModal").onclick=function(){modal.classList.add("hidden");};
-modal.onclick=function(e){if(e.target===modal)modal.classList.add("hidden");};
+document.getElementById("closeModal").onclick=function(){modalClose();};
+modal.onclick=function(e){if(e.target===modal)modalClose();};
 document.getElementById("rateRange").oninput=function(){
   settings.rate=parseFloat(this.value);
   document.getElementById("rateVal").textContent=settings.rate.toFixed(2);
@@ -3845,7 +3865,7 @@ document.getElementById("checkBtn").onclick=function(){
 document.getElementById("resetBtn").onclick=function(){
   vErr={};gErr={};eSave("nikki_vErr",vErr);eSave("nikki_gErr",gErr);
   toast("已清除錯題紀錄");
-  modal.classList.add("hidden");switchTab(curTab);
+  modalClose();switchTab(curTab);
 };
 function packRec(){
   function ks(o){return Object.keys(o).map(function(k){return parseInt(k,10);});}
@@ -3873,7 +3893,7 @@ document.getElementById("impBtn").onclick=function(){
   eSave("nikki_vErr",vErr);eSave("nikki_gErr",gErr);eSave("nikki_vSeen",vSeen);eSave("nikki_gSeen",gSeen);eSave("nikki_kSeen",kSeen);eSave("nikki_wSeen",wSeen);eSave("nikki_lSeen",lSeen);eSave("nikki_sSeen2",sSeen);
   document.getElementById("syncBox").value="";
   toast("已合併匯入");
-  modal.classList.add("hidden");switchTab(curTab);
+  modalClose();switchTab(curTab);
 };
 document.getElementById("syncSave").onclick=function(){
   var o=document.getElementById("syncOwner").value.trim();
